@@ -52,6 +52,10 @@ Then run the **Deploy to AWS** workflow (manual dispatch). It builds the image, 
 
 After deploy, the Fargate task gets a public IP. In the AWS ECS console: **Clusters** → your cluster → **Tasks** → select the running task → **Public IP**. Players connect to that IP on port **42420**.
 
+## Managing files (FileBrowser)
+
+A **FileBrowser** sidecar provides a web UI to manage game data on EFS. Open `http://<task-public-ip>:8080` in your browser. Default login: **admin** / **admin** — change the password in Settings after first login. To disable: set `enable_filebrowser = false` in `terraform.tfvars`.
+
 ## Optional: custom VPC
 
 In `terraform.tfvars`:

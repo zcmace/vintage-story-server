@@ -21,6 +21,14 @@ resource "aws_security_group" "ecs_task" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
+  ingress {
+    description = "FileBrowser web UI"
+    from_port   = 8080
+    to_port     = 8080
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
   egress {
     from_port   = 0
     to_port     = 0
@@ -81,46 +89,81 @@ resource "aws_ecs_task_definition" "vintage_story" {
   family                   = "${var.project_name}-task"
   network_mode             = "awsvpc"
   requires_compatibilities = ["FARGATE"]
-  cpu                      = var.fargate_cpu
-  memory                   = var.fargate_memory_mb
+  cpu                      = var.fargate_cpu + (var.enable_filebrowser ? 256 : 0)
+  memory                   = var.fargate_memory_mb + (var.enable_filebrowser ? 512 : 0)
   execution_role_arn       = aws_iam_role.ecs_execution.arn
   task_role_arn            = aws_iam_role.ecs_task.arn
 
-  container_definitions = jsonencode([
-    {
-      name      = "vintagestory"
-      image     = "${aws_ecr_repository.vintage_story_server.repository_url}:latest"
-      essential = true
+  container_definitions = jsonencode(concat(
+    [
+      {
+        name      = "vintagestory"
+        image     = "${aws_ecr_repository.vintage_story_server.repository_url}:latest"
+        essential = true
 
-      # Server files are baked into the image; only game data is on EFS
-      portMappings = [
-        { containerPort = 42420, protocol = "tcp", hostPort = 42420 },
-        { containerPort = 42420, protocol = "udp", hostPort = 42420 }
-      ]
+        portMappings = [
+          { containerPort = 42420, protocol = "tcp", hostPort = 42420 },
+          { containerPort = 42420, protocol = "udp", hostPort = 42420 }
+        ]
 
-      environment = [
-        { name = "VS_VERSION", value = var.vs_version }
-      ]
+        environment = [
+          { name = "VS_VERSION", value = var.vs_version }
+        ]
 
-      logConfiguration = {
-        logDriver = "awslogs"
-        options = {
-          "awslogs-group"         = aws_cloudwatch_log_group.ecs.name
-          "awslogs-region"        = data.aws_region.current.name
-          "awslogs-stream-prefix" = "ecs"
+        logConfiguration = {
+          logDriver = "awslogs"
+          options = {
+            "awslogs-group"         = aws_cloudwatch_log_group.ecs.name
+            "awslogs-region"        = data.aws_region.current.name
+            "awslogs-stream-prefix" = "ecs"
+          }
         }
+
+        mountPoints = [
+          {
+            sourceVolume  = "vintagestory-data"
+            containerPath = "/var/vintagestory/data"
+            readOnly      = false
+          }
+        ]
       }
+    ],
+    var.enable_filebrowser ? [
+      {
+        name      = "filebrowser"
+        image     = "filebrowser/filebrowser:latest"
+        essential = false
 
-      # Mount EFS for game data only (server binaries are in the image)
-      mountPoints = [
-        {
-          sourceVolume  = "vintagestory-data"
-          containerPath = "/var/vintagestory/data"
-          readOnly      = false
+        portMappings = [
+          { containerPort = 8080, protocol = "tcp", hostPort = 8080 }
+        ]
+
+        command = ["filebrowser", "--database", "/data/.filebrowser.db", "--root", "/data", "--port", "8080"]
+
+        environment = [
+          { name = "PUID", value = "1000" },
+          { name = "PGID", value = "1000" }
+        ]
+
+        logConfiguration = {
+          logDriver = "awslogs"
+          options = {
+            "awslogs-group"         = aws_cloudwatch_log_group.ecs.name
+            "awslogs-region"        = data.aws_region.current.name
+            "awslogs-stream-prefix" = "filebrowser"
+          }
         }
-      ]
-    }
-  ])
+
+        mountPoints = [
+          {
+            sourceVolume  = "vintagestory-data"
+            containerPath = "/data"
+            readOnly      = false
+          }
+        ]
+      }
+    ] : []
+  ))
 
   volume {
     name = "vintagestory-data"

@@ -64,6 +64,12 @@ variable "vs_version" {
   default     = "1.21.6"
 }
 
+variable "enable_filebrowser" {
+  description = "Add FileBrowser sidecar for web-based file management of EFS data"
+  type        = bool
+  default     = true
+}
+
 # -----------------------------------------------------------------------------
 # GitHub OIDC (for Actions to assume role without access keys)
 # -----------------------------------------------------------------------------

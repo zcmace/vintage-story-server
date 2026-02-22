@@ -28,6 +28,11 @@ output "github_actions_role_arn" {
   value       = aws_iam_role.github_actions.arn
 }
 
+output "filebrowser_url" {
+  description = "FileBrowser web UI (use task public IP + :8080). Default login: admin / admin - change in Settings!"
+  value       = var.enable_filebrowser ? "http://<task-public-ip>:8080" : null
+}
+
 output "github_secrets_required" {
   description = "GitHub Secrets required for the deploy workflow (OIDC: no access keys)"
   value = [
