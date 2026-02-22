@@ -12,7 +12,7 @@ permissions:
 
 jobs:
   restart:
-    name: Restart ECS service
+    name: Restart Vintage Story container
     runs-on: ubuntu-latest
     steps:
       - name: Configure AWS credentials
@@ -21,16 +21,15 @@ jobs:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Force new deployment (restart)
+      - name: Restart container via SSM
         run: |
-          aws ecs update-service \
-            --cluster ${{ secrets.ECS_CLUSTER_NAME }} \
-            --service ${{ secrets.ECS_SERVICE_NAME }} \
-            --force-new-deployment \
-            --output json
+          COMMAND_ID=$(aws ssm send-command \
+            --instance-ids "${{ secrets.EC2_INSTANCE_ID }}" \
+            --document-name "AWS-RunShellScript" \
+            --parameters '{"commands":["docker restart vintagestory_server"]}' \
+            --output text \
+            --query 'Command.CommandId')
 
-      - name: Wait for service stability
-        run: |
-          aws ecs wait services-stable \
-            --cluster ${{ secrets.ECS_CLUSTER_NAME }} \
-            --services ${{ secrets.ECS_SERVICE_NAME }}
+          echo "Waiting for restart..."
+          aws ssm wait command-executed --command-id "$COMMAND_ID" --instance-id "${{ secrets.EC2_INSTANCE_ID }}"
+          echo "Container restarted."
