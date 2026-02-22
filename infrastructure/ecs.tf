@@ -92,10 +92,7 @@ resource "aws_ecs_task_definition" "vintage_story" {
       image     = "${aws_ecr_repository.vintage_story_server.repository_url}:latest"
       essential = true
 
-      # Run launcher from image; work in /var/vintagestory/server so downloaded server files persist on EFS
-      entryPoint = ["/home/vintagestory/launcher.sh"]
-      workingDirectory = "/var/vintagestory/server"
-
+      # Server files are baked into the image; only game data is on EFS
       portMappings = [
         { containerPort = 42420, protocol = "tcp", hostPort = 42420 },
         { containerPort = 42420, protocol = "udp", hostPort = 42420 }
@@ -114,11 +111,11 @@ resource "aws_ecs_task_definition" "vintage_story" {
         }
       }
 
-      # Mount EFS at /var/vintagestory so both server binaries and game data persist across restarts
+      # Mount EFS for game data only (server binaries are in the image)
       mountPoints = [
         {
           sourceVolume  = "vintagestory-data"
-          containerPath = "/var/vintagestory"
+          containerPath = "/var/vintagestory/data"
           readOnly      = false
         }
       ]

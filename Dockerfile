@@ -35,6 +35,16 @@ RUN chown -R $USERNAME $VSPATH
 RUN mkdir -p $DATAPATH
 RUN chown -R $USERNAME $DATAPATH
 
+# Download server during build (GitHub Actions has internet; ECS Fargate may not)
+RUN cd $VSPATH && \
+    (wget -q "https://cdn.vintagestory.at/gamefiles/stable/vs_server_linux-x64_${VS_VERSION}.tar.gz" -O archive.tar.gz || \
+     wget -q "https://account.vintagestory.at/files/stable/vs_server_linux-x64_${VS_VERSION}.tar.gz" -O archive.tar.gz || \
+     wget -q "https://cdn.vintagestory.at/gamefiles/stable/vs_server_${VS_VERSION}.tar.gz" -O archive.tar.gz || \
+     wget -q "https://account.vintagestory.at/files/stable/vs_server_${VS_VERSION}.tar.gz" -O archive.tar.gz) && \
+    tar xzf archive.tar.gz && \
+    (test -f server.sh || (dir=$(ls -d vs_server* 2>/dev/null | head -1) && [ -n "$dir" ] && mv "$dir"/* . && rm -rf "$dir")) && \
+    rm -f archive.tar.gz && chmod +x server.sh
+
 #changes work dir
 WORKDIR $VSPATH
 
