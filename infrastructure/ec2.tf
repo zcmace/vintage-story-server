@@ -63,6 +63,14 @@ resource "aws_security_group" "ec2" {
     cidr_blocks = var.ssh_allowed_cidrs
   }
 
+  ingress {
+    description = "ICMP (ping) for debugging"
+    from_port   = -1
+    to_port     = -1
+    protocol    = "icmp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
   egress {
     from_port   = 0
     to_port     = 0
@@ -125,13 +133,30 @@ resource "aws_iam_instance_profile" "ec2" {
   role        = aws_iam_role.ec2.name
 }
 
+resource "aws_eip" "vintage_story" {
+  domain   = "vpc"
+  instance = aws_instance.vintage_story.id
+
+  tags = {
+    Name = "${var.project_name}-eip"
+  }
+}
+
 resource "aws_instance" "vintage_story" {
-  ami                    = data.aws_ami.amazon_linux.id
-  instance_type          = var.ec2_instance_type
-  subnet_id              = local.subnet_ids[0]
-  vpc_security_group_ids = [aws_security_group.ec2.id]
-  iam_instance_profile   = aws_iam_instance_profile.ec2.name
+  ami                         = data.aws_ami.amazon_linux.id
+  instance_type               = var.ec2_instance_type
+  subnet_id                   = local.public_subnet_id
+  vpc_security_group_ids      = [aws_security_group.ec2.id]
+  iam_instance_profile        = aws_iam_instance_profile.ec2.name
   associate_public_ip_address = true
+  key_name                    = var.ssh_key_name
+
+  # IMDSv2 required for Fleet Manager / Default Host Management Configuration
+  metadata_options {
+    http_endpoint               = "enabled"
+    http_tokens                 = "required"
+    http_put_response_hop_limit  = 1
+  }
 
   root_block_device {
     volume_size = var.ec2_root_volume_gb
@@ -139,9 +164,11 @@ resource "aws_instance" "vintage_story" {
   }
 
   user_data = templatefile("${path.module}/user-data.sh", {
-    ecr_registry       = split("/", aws_ecr_repository.vintage_story_server.repository_url)[0]
-    ecr_repository_url = aws_ecr_repository.vintage_story_server.repository_url
-    vs_version        = var.vs_version
+    ecr_registry                 = split("/", aws_ecr_repository.vintage_story_server.repository_url)[0]
+    ecr_repository_url           = aws_ecr_repository.vintage_story_server.repository_url
+    vs_version                   = var.vs_version
+    aws_region                   = data.aws_region.current.name
+    serial_console_password_b64  = var.serial_console_password != null ? base64encode(var.serial_console_password) : ""
   })
 
   tags = {

@@ -56,6 +56,12 @@ Then run the **Deploy to AWS** workflow (manual dispatch). It builds the image, 
 
 After deploy, use the EC2 instance **public IP** (Terraform output `ec2_public_ip`). Players connect on port **42420**.
 
+## Shell access (no SSH key)
+
+Use **Session Manager**: EC2 Console → select instance → **Connect** → **Session Manager** tab → Connect. No key pair required.
+
+**Note:** SSM uses the public internet in the default VPC. For custom VPCs with private subnets (no NAT), add VPC endpoints for SSM (see [AWS docs](https://repost.aws/knowledge-center/ec2-systems-manager-vpc-endpoints)).
+
 ## Optional: custom VPC
 
 In `terraform.tfvars`:

@@ -14,8 +14,8 @@ output "ec2_instance_id" {
 }
 
 output "ec2_public_ip" {
-  description = "EC2 instance public IP - connect to game on port 42420"
-  value       = aws_instance.vintage_story.public_ip
+  description = "EC2 Elastic IP - connect to game on port 42420 (static, survives instance restart)"
+  value       = aws_eip.vintage_story.public_ip
 }
 
 output "github_actions_role_arn" {
@@ -25,12 +25,12 @@ output "github_actions_role_arn" {
 
 output "portainer_url" {
   description = "Portainer web UI - manage Docker, restart containers. First visit: create admin user."
-  value       = "http://${aws_instance.vintage_story.public_ip}:9000"
+  value       = "http://${aws_eip.vintage_story.public_ip}:9000"
 }
 
 output "filebrowser_url" {
   description = "FileBrowser web UI - manage game files. Default login: admin / admin - change in Settings!"
-  value       = "http://${aws_instance.vintage_story.public_ip}:8080"
+  value       = "http://${aws_eip.vintage_story.public_ip}:8080"
 }
 
 output "github_secrets_required" {

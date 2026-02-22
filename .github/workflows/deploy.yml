@@ -68,7 +68,7 @@ jobs:
             --arg reg "$ECR_REGISTRY" \
             '{commands: [
               "REGION=$(curl -s http://169.254.169.254/latest/meta-data/placement/region)",
-              "aws ecr get-login-password --region $REGION | docker login --username AWS --password-stdin " + $reg,
+              "AWS_PAGER=\"\" docker login -u AWS -p \"$(aws ecr get-login-password --region $REGION)\" " + $reg,
               "docker pull " + $img,
               "docker stop vintagestory_server 2>/dev/null || true",
               "docker rm vintagestory_server 2>/dev/null || true",

@@ -64,6 +64,19 @@ variable "ssh_allowed_cidrs" {
   default     = ["0.0.0.0/0"]
 }
 
+variable "ssh_key_name" {
+  description = "EC2 key pair for SSH/EC2 Instance Connect. Leave null to use Session Manager only (Connect → Session Manager tab)."
+  type        = string
+  default     = null
+}
+
+variable "serial_console_password" {
+  description = "Password for ec2-user (Serial Console fallback). Set to enable EC2 Serial Console login when SSM/SSH unavailable."
+  type        = string
+  default     = null
+  sensitive   = true
+}
+
 variable "vs_version" {
   description = "Vintage Story server version (env var for container)"
   type        = string

@@ -66,6 +66,7 @@ resource "aws_iam_role_policy" "github_actions_ecr" {
 }
 
 # EC2 deploy via SSM Run Command (no SSH keys)
+# SendCommand requires permission on both the document and the target instance
 resource "aws_iam_role_policy" "github_actions_ec2_deploy" {
   name_prefix = "ec2-deploy-"
   role        = aws_iam_role.github_actions.id
@@ -76,7 +77,10 @@ resource "aws_iam_role_policy" "github_actions_ec2_deploy" {
       {
         Effect   = "Allow"
         Action   = "ssm:SendCommand"
-        Resource = "arn:aws:ssm:${data.aws_region.current.name}::document/AWS-RunShellScript"
+        Resource = [
+          "arn:aws:ssm:${data.aws_region.current.name}::document/AWS-RunShellScript",
+          aws_instance.vintage_story.arn
+        ]
       },
       {
         Effect   = "Allow"
