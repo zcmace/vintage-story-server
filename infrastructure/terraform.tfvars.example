@@ -1,0 +1,18 @@
+# Copy to terraform.tfvars and adjust. Do not commit terraform.tfvars if it contains secrets.
+
+aws_region   = "us-east-1"
+environment  = "prod"
+
+# Required for GitHub Actions OIDC (replace with your org and repo)
+github_org   = "zcmace"
+github_repo  = "vintage-story-server"
+
+# Optional: use a custom VPC
+# use_default_vpc = false
+# vpc_id          = "vpc-xxxxxxxx"
+# subnet_ids      = ["subnet-xxxxxxxx", "subnet-yyyyyyyy"]
+
+# Optional: Fargate task size and game version
+# fargate_cpu       = 512
+# fargate_memory_mb = 1024
+# vs_version        = "1.21.6"
