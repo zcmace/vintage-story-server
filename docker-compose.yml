@@ -1,0 +1,40 @@
+version: "3.9"
+services:
+  vsserver:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - VS_HOMEPATH=${VS_HOMEPATH:-/home/vintagestory}
+        - VSPATH=${VSPATH:-/home/vintagestory/server}
+        - DATAPATH=${DATAPATH:-/var/vintagestory/data}
+    image: vintage_story_server:any
+    container_name: vintagestory_server
+    ports:
+      - "42420:42420"
+    volumes:
+      - ${VS_SERVER_PATH:-./vintage_story/server}:${VSPATH:-/home/vintagestory/server}
+      - ${VS_DATA_PATH:-./vintage_story/data}:${DATAPATH:-/var/vintagestory/data}
+    environment:
+      - VS_VERSION=${VS_VERSION:-1.21.6}
+    networks:
+      - vintagestory_network
+    restart: unless-stopped
+
+  portainer:
+    image: portainer/portainer-ce:latest
+    container_name: portainer
+    ports:
+      - "9000:9000"
+      - "9443:9443"
+    volumes:
+      - ${PORTAINER_DATA_PATH:-./portainer/data}:/data
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: -H unix:///var/run/docker.sock
+    restart: always
+    networks:
+      - vintagestory_network
+
+networks:
+  vintagestory_network:
+    driver: bridge

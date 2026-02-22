@@ -1,0 +1,24 @@
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Portainer password file
+portainer_password.txt
+
+# Data directories (if storing locally)
+vintage_story/*
+portainer/data/
+
+# Docker
+*.log
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
