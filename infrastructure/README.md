@@ -1,17 +1,16 @@
 # Infrastructure (Terraform)
 
-Terraform for the Vintage Story server on **AWS ECS Fargate**. Provisions ECR, ECS cluster, Fargate task definition and service, and EFS for persistent game data.
+Terraform for the Vintage Story server on **AWS EC2**. Provisions ECR, a single EC2 instance with Docker, and EBS for persistent game data. **Portainer** and **FileBrowser** provide a web UI for container restarts and file management.
 
 ## What gets created
 
 | Resource | Purpose |
 |----------|---------|
 | **ECR repository** | `vintage-story-server` – GitHub Actions builds and pushes the image here. |
-| **ECS cluster** | Fargate cluster for the game server. |
-| **Task definition & service** | One Fargate task, port 42420, public IP for player connections. |
-| **EFS** | Persistent storage for world/saves/config; mounted at `/var/vintagestory/data`. |
-| **Security groups** | ECS task: 42420 TCP/UDP. EFS: NFS from ECS tasks. |
-| **IAM roles** | Task execution (ECR, logs) and task role. |
+| **EC2 instance** | Amazon Linux 2023, Docker, Vintage Story + Portainer + FileBrowser. |
+| **EBS (root volume)** | Game data stored at `/var/vintagestory/data` on the instance. |
+| **Security group** | Ports 42420 (game), 9000/9443 (Portainer), 8080 (FileBrowser), 22 (SSH). |
+| **IAM roles** | Instance profile (ECR pull, SSM); GitHub OIDC role (ECR push, SSM deploy). |
 
 ## Prerequisites
 
@@ -23,7 +22,7 @@ Terraform for the Vintage Story server on **AWS ECS Fargate**. Provisions ECR, E
 ```bash
 cd infrastructure
 cp terraform.tfvars.example terraform.tfvars
-# Edit terraform.tfvars if needed (optional)
+# Edit terraform.tfvars if needed (github_org, github_repo required)
 terraform init
 terraform plan
 terraform apply
@@ -39,22 +38,23 @@ In **Settings → Secrets and variables → Actions** add:
 
 | Secret | Description |
 |--------|-------------|
-| `AWS_ROLE_ARN` | Terraform output `github_actions_role_arn` (IAM role for OIDC) |
-| `ECS_CLUSTER_NAME` | Terraform output `ecs_cluster_name` (e.g. `vintage-story-cluster`) |
-| `ECS_SERVICE_NAME` | Terraform output `ecs_service_name` (e.g. `vintage-story-service`) |
-| `ECS_TASK_DEFINITION` | Terraform output `ecs_task_definition_family` (e.g. `vintage-story-task`) |
+| `AWS_ROLE_ARN` | Terraform output `github_actions_role_arn` |
+| `EC2_INSTANCE_ID` | Terraform output `ec2_instance_id` |
 
 **Terraform:** Set `github_org` and `github_repo` in `terraform.tfvars` to your GitHub org/user and repo name so the OIDC trust is scoped to that repository.
 
-Then run the **Deploy to AWS** workflow (manual dispatch). It builds the image, pushes to ECR, and deploys to ECS Fargate.
+Then run the **Deploy to AWS** workflow (manual dispatch). It builds the image, pushes to ECR, and deploys to EC2 via SSM (no SSH keys).
+
+## Web UI
+
+| Service | URL | Purpose |
+|---------|-----|---------|
+| **Portainer** | `http://<instance-ip>:9000` | Docker management, restart containers, view logs |
+| **FileBrowser** | `http://<instance-ip>:8080` | Manage game files (config, mods, saves). Default: admin / admin |
 
 ## Connecting to the game
 
-After deploy, the Fargate task gets a public IP. In the AWS ECS console: **Clusters** → your cluster → **Tasks** → select the running task → **Public IP**. Players connect to that IP on port **42420**.
-
-## Managing files (FileBrowser)
-
-A **FileBrowser** sidecar provides a web UI to manage game data on EFS. Open `http://<task-public-ip>:8080` in your browser. Default login: **admin** / **admin** — change the password in Settings after first login. To disable: set `enable_filebrowser = false` in `terraform.tfvars`.
+After deploy, use the EC2 instance **public IP** (Terraform output `ec2_public_ip`). Players connect on port **42420**.
 
 ## Optional: custom VPC
 
@@ -63,12 +63,18 @@ In `terraform.tfvars`:
 ```hcl
 use_default_vpc = false
 vpc_id          = "vpc-xxxxxxxx"
-subnet_ids      = ["subnet-xxxxxxxx", "subnet-yyyyyyyy"]
+subnet_ids      = ["subnet-xxxxxxxx"]
 ```
 
-## Optional: remote state
+Use a **public** subnet so the instance can reach ECR and the internet.
 
-Uncomment the `backend "s3"` block in `versions.tf`, create the S3 bucket (and optional DynamoDB table for locking), then run `terraform init -migrate-state`.
+## Optional: restrict SSH
+
+By default SSH (port 22) is open to `0.0.0.0/0`. Restrict in `terraform.tfvars`:
+
+```hcl
+ssh_allowed_cidrs = ["YOUR_IP/32"]
+```
 
 ## Destroying
 
@@ -76,4 +82,4 @@ Uncomment the `backend "s3"` block in `versions.tf`, create the S3 bucket (and o
 terraform destroy
 ```
 
-This removes the cluster, service, task definition, EFS (and all game data on EFS), ECR repository, and related IAM/security groups.
+This removes the EC2 instance (and all game data on it), ECR repository, and related IAM/security groups.

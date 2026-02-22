@@ -8,19 +8,14 @@ output "ecr_registry" {
   value       = "${data.aws_caller_identity.current.account_id}.dkr.ecr.${data.aws_region.current.name}.amazonaws.com"
 }
 
-output "ecs_cluster_name" {
-  description = "ECS cluster name (for GitHub Actions deploy)"
-  value       = aws_ecs_cluster.main.name
+output "ec2_instance_id" {
+  description = "EC2 instance ID (for SSM deploy)"
+  value       = aws_instance.vintage_story.id
 }
 
-output "ecs_service_name" {
-  description = "ECS service name (for GitHub Actions deploy)"
-  value       = aws_ecs_service.vintage_story.name
-}
-
-output "ecs_task_definition_family" {
-  description = "ECS task definition family (for GitHub Actions deploy)"
-  value       = aws_ecs_task_definition.vintage_story.family
+output "ec2_public_ip" {
+  description = "EC2 instance public IP - connect to game on port 42420"
+  value       = aws_instance.vintage_story.public_ip
 }
 
 output "github_actions_role_arn" {
@@ -28,17 +23,20 @@ output "github_actions_role_arn" {
   value       = aws_iam_role.github_actions.arn
 }
 
+output "portainer_url" {
+  description = "Portainer web UI - manage Docker, restart containers. First visit: create admin user."
+  value       = "http://${aws_instance.vintage_story.public_ip}:9000"
+}
+
 output "filebrowser_url" {
-  description = "FileBrowser web UI (use task public IP + :8080). Default login: admin / admin - change in Settings!"
-  value       = var.enable_filebrowser ? "http://<task-public-ip>:8080" : null
+  description = "FileBrowser web UI - manage game files. Default login: admin / admin - change in Settings!"
+  value       = "http://${aws_instance.vintage_story.public_ip}:8080"
 }
 
 output "github_secrets_required" {
   description = "GitHub Secrets required for the deploy workflow (OIDC: no access keys)"
   value = [
     "AWS_ROLE_ARN (use github_actions_role_arn output)",
-    "ECS_CLUSTER_NAME (use ecs_cluster_name output)",
-    "ECS_SERVICE_NAME (use ecs_service_name output)",
-    "ECS_TASK_DEFINITION (use ecs_task_definition_family output)"
+    "EC2_INSTANCE_ID (use ec2_instance_id output)"
   ]
 }

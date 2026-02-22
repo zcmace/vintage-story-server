@@ -40,22 +40,28 @@ variable "subnet_ids" {
 variable "ecr_image_retention_count" {
   description = "Number of untagged images to retain in ECR (0 = keep all)"
   type        = number
-  default     = 10
+  default     = 5
 }
 
 # -----------------------------------------------------------------------------
-# ECS Fargate
+# EC2
 # -----------------------------------------------------------------------------
-variable "fargate_cpu" {
-  description = "Fargate task CPU units (256, 512, 1024, 2048, 4096)"
-  type        = number
-  default     = 512
+variable "ec2_instance_type" {
+  description = "EC2 instance type for the game server"
+  type        = string
+  default     = "t3.small"
 }
 
-variable "fargate_memory_mb" {
-  description = "Fargate task memory in MB (512, 1024, 2048, 4096, 8192, 16384)"
+variable "ec2_root_volume_gb" {
+  description = "Root EBS volume size in GB (game data stored here)"
   type        = number
-  default     = 1024
+  default     = 30
+}
+
+variable "ssh_allowed_cidrs" {
+  description = "CIDR blocks allowed for SSH (use 0.0.0.0/0 to allow all, or your IP)"
+  type        = list(string)
+  default     = ["0.0.0.0/0"]
 }
 
 variable "vs_version" {
@@ -64,11 +70,6 @@ variable "vs_version" {
   default     = "1.21.6"
 }
 
-variable "enable_filebrowser" {
-  description = "Add FileBrowser sidecar for web-based file management of EFS data"
-  type        = bool
-  default     = true
-}
 
 # -----------------------------------------------------------------------------
 # GitHub OIDC (for Actions to assume role without access keys)

@@ -65,42 +65,23 @@ resource "aws_iam_role_policy" "github_actions_ecr" {
   })
 }
 
-# ECS: describe task definition, register new revision, update service
-resource "aws_iam_role_policy" "github_actions_ecs" {
-  name_prefix = "ecs-"
+# EC2 deploy via SSM Run Command (no SSH keys)
+resource "aws_iam_role_policy" "github_actions_ec2_deploy" {
+  name_prefix = "ec2-deploy-"
   role        = aws_iam_role.github_actions.id
 
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
       {
-        Effect = "Allow"
-        Action = [
-          "ecs:DescribeTaskDefinition",
-          "ecs:RegisterTaskDefinition"
-        ]
+        Effect   = "Allow"
+        Action   = "ssm:SendCommand"
+        Resource = "arn:aws:ssm:${data.aws_region.current.name}::document/AWS-RunShellScript"
+      },
+      {
+        Effect   = "Allow"
+        Action   = "ssm:GetCommandInvocation"
         Resource = "*"
-      },
-      {
-        Effect = "Allow"
-        Action = [
-          "ecs:UpdateService",
-          "ecs:DescribeServices"
-        ]
-        Resource = aws_ecs_service.vintage_story.id
-      },
-      {
-        Effect = "Allow"
-        Action = "iam:PassRole"
-        Resource = [
-          aws_iam_role.ecs_execution.arn,
-          aws_iam_role.ecs_task.arn
-        ]
-        Condition = {
-          StringLike = {
-            "iam:PassedToService" = "ecs-tasks.amazonaws.com"
-          }
-        }
       }
     ]
   })

@@ -12,10 +12,7 @@ github_repo  = "vintage-story-server"
 # vpc_id          = "vpc-xxxxxxxx"
 # subnet_ids      = ["subnet-xxxxxxxx", "subnet-yyyyyyyy"]
 
-# Optional: Fargate task size and game version
-# fargate_cpu       = 512
-# fargate_memory_mb = 1024
-# vs_version        = "1.21.6"
-
-# Optional: disable FileBrowser (web file manager at :8080)
-# enable_filebrowser = false
+# Optional: EC2 instance size and game version
+# ec2_instance_type  = "t3.small"
+# ec2_root_volume_gb = 30
+# vs_version         = "1.21.6"
