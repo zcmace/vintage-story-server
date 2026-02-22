@@ -1,10 +1,11 @@
 # Copy to terraform.tfvars and adjust. Do not commit terraform.tfvars if it contains secrets.
+# See infrastructure/README.md for full documentation.
 
 aws_region   = "us-east-1"
 environment  = "prod"
 
-# Required for GitHub Actions OIDC (replace with your org and repo)
-github_org   = "zcmace"
+# Required for GitHub Actions OIDC - replace with your GitHub username and repo name
+github_org   = "your-github-username"
 github_repo  = "vintage-story-server"
 
 # Optional: use a custom VPC

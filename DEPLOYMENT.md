@@ -1,74 +1,247 @@
-# Deployment Guide
+# Deployment Guide – Vintage Story Server on AWS
 
-Deploy the Vintage Story server to **AWS EC2** using GitHub Actions.
+This guide walks you through deploying a Vintage Story game server to AWS. No prior AWS or Terraform experience required.
+
+## Overview
+
+You will:
+
+1. Create an AWS account (if needed)
+2. Install Terraform and the AWS CLI
+3. Run Terraform to create the server infrastructure
+4. Add two secrets to your GitHub repository
+5. Deploy the server with one click from GitHub Actions
+
+**Estimated time:** 20–30 minutes  
+**Cost:** ~$15–25/month (t3.small EC2 + Elastic IP)
+
+---
 
 ## Prerequisites
 
-1. AWS account with appropriate permissions
-2. GitHub repository
-3. **Infrastructure**: Use the Terraform in **`infrastructure/`** to create the EC2 instance, ECR repository, and IAM. See `infrastructure/README.md` for `terraform init`, `plan`, and `apply`.
+### 1. AWS Account
 
-## GitHub Secrets (OIDC – no access keys)
+- Sign up at [aws.amazon.com](https://aws.amazon.com)
+- You’ll need a credit card; the free tier helps reduce cost for new accounts
 
-The deploy workflow uses **OpenID Connect (OIDC)** so GitHub Actions assumes an IAM role. You do **not** store AWS access keys in GitHub.
+### 2. Terraform
 
-Go to **Settings → Secrets and variables → Actions** and add:
+Terraform provisions the server and related resources.
 
-### Required
+- **Windows:** Download from [terraform.io/downloads](https://www.terraform.io/downloads) and add to PATH
+- **macOS:** `brew install terraform`
+- **Linux:** See [terraform.io/docs/install](https://developer.hashicorp.com/terraform/install)
 
-| Secret | Description |
-|--------|-------------|
-| **`AWS_ROLE_ARN`** | Terraform output `github_actions_role_arn` |
-| **`EC2_INSTANCE_ID`** | Terraform output `ec2_instance_id` |
+Verify: `terraform version` (need 1.5 or newer)
 
-When you run Terraform, set **`github_org`** and **`github_repo`** in `terraform.tfvars` to your GitHub organization/user and repository name so only workflows from that repo can assume the role.
+### 3. AWS CLI
 
-### How to add secrets
+Used to authenticate Terraform with AWS.
 
-1. Open `https://github.com/YOUR_USERNAME/YOUR_REPO/settings/secrets/actions`
-2. Click **New repository secret**
-3. Enter the name and value
+- Install: [docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)
+- Configure: `aws configure` and enter your Access Key ID, Secret Access Key, and region (e.g. `us-east-1`)
 
-## Deploy
+Verify: `aws sts get-caller-identity` (should print your account info)
 
-1. **Apply Terraform** (once): `cd infrastructure && terraform apply` and note the outputs.
-2. **Set the GitHub Secrets** above.
-3. **Run the workflow**: Actions → **Deploy to AWS** → **Run workflow**.
+---
 
-The workflow will:
+## Step 1: Fork the Repository
 
-1. Build the Vintage Story server Docker image and push it to ECR
-2. Deploy to EC2 via SSM (pull image, restart container)
+1. Open this repository on GitHub
+2. Click **Fork** to create a copy under your account
+3. Clone your fork: `git clone https://github.com/YOUR_USERNAME/vintage-story-server.git`
 
-Game data (worlds, saves, config) is stored on the EC2 root volume at `/var/vintagestory/data`.
+---
 
-## Web UI
+## Step 2: Configure Terraform
 
-- **Portainer** (`http://<instance-ip>:9000`): Restart the server, view logs, manage Docker. First visit: create admin user.
-- **FileBrowser** (`http://<instance-ip>:8080`): Manage game files. Default login: admin / admin — change in Settings.
+1. Go to the infrastructure folder:
+   ```bash
+   cd vintage-story-server/infrastructure
+   ```
 
-## Connecting to the server
+2. Copy the example config:
+   ```bash
+   cp terraform.tfvars.example terraform.tfvars
+   ```
 
-Use the EC2 **public IP** (Terraform output `ec2_public_ip`). Players connect on port **42420**.
+3. Edit `terraform.tfvars` in any text editor. **You must change these:**
+   ```hcl
+   github_org   = "YOUR_GITHUB_USERNAME"   # e.g. "johndoe"
+   github_repo  = "vintage-story-server"   # your repo name (usually keep as-is)
+   ```
 
-## Restarting the server
+   Optional settings (defaults are fine for most users):
+   - `aws_region` – AWS region (default: `us-east-1`)
+   - `ec2_instance_type` – Server size (default: `t3.small`)
+   - `vs_version` – Vintage Story version (default: `1.21.6`)
 
-- **Portainer**: Containers → vintagestory_server → Restart
-- **GitHub Actions**: Run the **Restart Server** workflow
+4. **Do not commit** `terraform.tfvars` if it contains secrets (e.g. `serial_console_password`). It’s in `.gitignore` by default.
 
-## Local development
+---
 
-1. Copy `.env.example` to `.env` and set paths if needed.
-2. Run `docker compose up -d`.
+## Step 3: Run Terraform
 
-## Security
+1. Initialize Terraform (downloads providers):
+   ```bash
+   terraform init
+   ```
 
-- **OIDC**: The workflow assumes an IAM role via GitHub OIDC; no long-lived AWS access keys are stored in GitHub.
-- The Terraform role is scoped to your repo (`github_org`/`github_repo`); only workflows from that repository can assume it.
-- The role has least privilege: ECR push, SSM SendCommand for deploys.
+2. Preview what will be created:
+   ```bash
+   terraform plan
+   ```
+
+3. Create the infrastructure:
+   ```bash
+   terraform apply
+   ```
+   Type `yes` when prompted.
+
+4. **Save the outputs.** You’ll need them for GitHub. Example:
+   ```
+   ec2_public_ip         = "54.123.45.67"      ← Players connect to this IP
+   portainer_url         = "http://54.123.45.67:9000"
+   filebrowser_url       = "http://54.123.45.67:8080"
+   github_actions_role_arn = "arn:aws:iam::123456789:role/..."
+   ec2_instance_id       = "i-0abc123def456"
+   ```
+
+---
+
+## Step 4: Add GitHub Secrets
+
+GitHub Actions needs two secrets to deploy. No AWS access keys are stored in GitHub; it uses OIDC to assume a role.
+
+1. Open your repo: `https://github.com/YOUR_USERNAME/vintage-story-server`
+2. Go to **Settings** → **Secrets and variables** → **Actions**
+3. Click **New repository secret**
+4. Add these two secrets:
+
+| Secret Name      | Value (from Terraform output)     |
+|------------------|-----------------------------------|
+| `AWS_ROLE_ARN`   | `github_actions_role_arn`         |
+| `EC2_INSTANCE_ID`| `ec2_instance_id`                |
+
+---
+
+## Step 5: Deploy the Server
+
+1. In your repo, go to **Actions**
+2. Select **Deploy to AWS**
+3. Click **Run workflow** → **Run workflow**
+4. Wait a few minutes. The workflow will:
+   - Build the Vintage Story Docker image
+   - Push it to AWS ECR
+   - Deploy to your EC2 instance via SSM
+
+When it finishes, your server is running.
+
+---
+
+## Connecting to the Game
+
+1. In Vintage Story: **Multiplayer** → **Add new server**
+2. Enter the **public IP** (Terraform output `ec2_public_ip`)
+3. Port 42420 is used automatically
+4. Add the server and join
+
+---
+
+## Web UIs
+
+| Service     | URL                         | Purpose                                      |
+|-------------|-----------------------------|----------------------------------------------|
+| **Portainer** | `http://<your-ip>:9000`   | Restart server, view logs, manage containers |
+| **FileBrowser** | `http://<your-ip>:8080` | Edit config, add mods, manage saves          |
+
+**FileBrowser:** First login is `admin` / `admin`. Change the password in Settings immediately.
+
+**Portainer:** On first visit, create an admin account (one-time setup).
+
+---
+
+## Server Console Commands
+
+To run server commands (e.g. `/whitelist add`, `/announce`):
+
+**Option A – Single command:**
+```bash
+docker exec -it vintagestory_server bash -c "cd /home/vintagestory/server && ./server.sh command '/help'"
+```
+Replace `/help` with any server command.
+
+**Option B – Interactive console:**
+```bash
+docker exec -it vintagestory_server screen -r vintagestory_server
+```
+Type commands and press Enter. Detach with **Ctrl+A**, then **D**.
+
+You need shell access first: EC2 Console → select instance → **Connect** → **Session Manager** tab.
+
+---
+
+## Restarting the Server
+
+- **Portainer:** Containers → vintagestory_server → Restart
+- **GitHub Actions:** Actions → Restart Server → Run workflow
+
+---
+
+## Updating the Game Version
+
+1. Edit `infrastructure/terraform.tfvars`:
+   ```hcl
+   vs_version = "1.22.0"   # or whatever version you want
+   ```
+2. Run `terraform apply`
+3. Run the **Deploy to AWS** workflow to rebuild and redeploy
+
+---
 
 ## Troubleshooting
 
-- **Workflow can't assume role**: Ensure `AWS_ROLE_ARN` matches Terraform output `github_actions_role_arn`, and that `github_org`/`github_repo` in Terraform match your repository. The workflow needs `id-token: write` (already set in the workflow).
-- **Deploy fails**: Check workflow logs; ensure `EC2_INSTANCE_ID` matches Terraform output. The EC2 instance must have SSM agent (Amazon Linux 2023 has it by default) and the instance profile with SSM permissions.
-- **Container won't start**: SSH to the instance (or use SSM Session Manager) and run `docker logs vintagestory_server`. Check `/var/vintagestory/data/Logs` for Vintage Story errors.
+### Workflow can’t assume role
+- Confirm `AWS_ROLE_ARN` matches Terraform output `github_actions_role_arn`
+- Ensure `github_org` and `github_repo` in `terraform.tfvars` match your repo
+
+### Deploy fails
+- Check workflow logs for the exact error
+- Confirm `EC2_INSTANCE_ID` matches Terraform output `ec2_instance_id`
+- Instance must be running; SSM agent is included on Amazon Linux 2023
+
+### Can’t connect to the game
+- Check security group allows port 42420 (Terraform does this by default)
+- Use the Elastic IP from `ec2_public_ip`, not a temporary IP
+
+### Container won’t start
+- Use Session Manager to connect, then: `docker logs vintagestory_server`
+- Check Vintage Story logs: `/var/vintagestory/data/Logs/`
+
+### FileBrowser wrong credentials
+- Default is `admin` / `admin` only for a new database
+- To reset: stop container, delete `/var/vintagestory/data/.filebrowser.db`, restart container
+
+---
+
+## Security Notes
+
+- **OIDC:** GitHub Actions assumes an IAM role; no long-lived AWS keys in GitHub
+- **Scoped role:** Only workflows from your repo can assume the role
+- **SSH:** By default port 22 is open. Restrict in `terraform.tfvars`:
+  ```hcl
+  ssh_allowed_cidrs = ["YOUR_IP/32"]
+  ```
+
+---
+
+## Destroying (Removing Everything)
+
+To delete the server and all resources:
+
+```bash
+cd infrastructure
+terraform destroy
+```
+
+Type `yes` when prompted. **This deletes all game data** on the instance.

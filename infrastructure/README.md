@@ -1,70 +1,70 @@
 # Infrastructure (Terraform)
 
-Terraform for the Vintage Story server on **AWS EC2**. Provisions ECR, a single EC2 instance with Docker, and EBS for persistent game data. **Portainer** and **FileBrowser** provide a web UI for container restarts and file management.
+Terraform config for running a Vintage Story server on **AWS EC2**. Creates the server, storage, and everything needed for one-click deploys from GitHub.
 
-## What gets created
+**New to Terraform?** Follow the main [DEPLOYMENT.md](../DEPLOYMENT.md) guide—it covers setup step by step.
+
+---
+
+## What Gets Created
 
 | Resource | Purpose |
 |----------|---------|
-| **ECR repository** | `vintage-story-server` – GitHub Actions builds and pushes the image here. |
-| **EC2 instance** | Amazon Linux 2023, Docker, Vintage Story + Portainer + FileBrowser. |
-| **EBS (root volume)** | Game data stored at `/var/vintagestory/data` on the instance. |
-| **Security group** | Ports 42420 (game), 9000/9443 (Portainer), 8080 (FileBrowser), 22 (SSH). |
-| **IAM roles** | Instance profile (ECR pull, SSM); GitHub OIDC role (ECR push, SSM deploy). |
+| **ECR repository** | Stores the Vintage Story Docker image. GitHub Actions builds and pushes here. |
+| **EC2 instance** | Amazon Linux 2023 with Docker. Runs Vintage Story, Portainer, and FileBrowser. |
+| **Elastic IP** | Static public IP so players can always connect to the same address. |
+| **EBS volume** | Root disk. Game data lives at `/var/vintagestory/data`. |
+| **Security group** | Firewall rules: 42420 (game), 9000/9443 (Portainer), 8080 (FileBrowser), 22 (SSH). |
+| **IAM roles** | Instance role (ECR pull, SSM); GitHub OIDC role (ECR push, SSM deploy). |
 
-## Prerequisites
+---
 
-1. **Terraform** >= 1.5 (`terraform version`)
-2. **AWS credentials** configured (`aws sts get-caller-identity`)
-
-## Quick start
+## Quick Start
 
 ```bash
 cd infrastructure
 cp terraform.tfvars.example terraform.tfvars
-# Edit terraform.tfvars if needed (github_org, github_repo required)
+# Edit terraform.tfvars: set github_org and github_repo
 terraform init
 terraform plan
 terraform apply
 ```
 
-After `apply`, note the outputs and set GitHub Secrets (see below).
+After `apply`, copy the outputs and add them as GitHub Secrets (see [DEPLOYMENT.md](../DEPLOYMENT.md#step-4-add-github-secrets)).
 
-## GitHub Secrets (OIDC – no access keys)
+---
 
-The workflow uses **OpenID Connect** so GitHub Actions assumes an IAM role; you do **not** need `AWS_ACCESS_KEY_ID` or `AWS_SECRET_ACCESS_KEY`.
+## Configuration (terraform.tfvars)
 
-In **Settings → Secrets and variables → Actions** add:
+Copy `terraform.tfvars.example` to `terraform.tfvars` and adjust.
 
-| Secret | Description |
-|--------|-------------|
-| `AWS_ROLE_ARN` | Terraform output `github_actions_role_arn` |
-| `EC2_INSTANCE_ID` | Terraform output `ec2_instance_id` |
+### Required
 
-**Terraform:** Set `github_org` and `github_repo` in `terraform.tfvars` to your GitHub org/user and repo name so the OIDC trust is scoped to that repository.
+| Variable | Description |
+|----------|-------------|
+| `github_org` | Your GitHub username or organization (e.g. `johndoe`) |
+| `github_repo` | Repository name (e.g. `vintage-story-server`) |
 
-Then run the **Deploy to AWS** workflow (manual dispatch). It builds the image, pushes to ECR, and deploys to EC2 via SSM (no SSH keys).
+### Optional (defaults are fine for most users)
 
-## Web UI
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `aws_region` | `us-east-1` | AWS region |
+| `ec2_instance_type` | `t3.small` | Instance size (~$15/mo). Use `t3.medium` for more players. |
+| `ec2_root_volume_gb` | `30` | Disk size for game data |
+| `vs_version` | `1.21.6` | Vintage Story server version |
 
-| Service | URL | Purpose |
-|---------|-----|---------|
-| **Portainer** | `http://<instance-ip>:9000` | Docker management, restart containers, view logs |
-| **FileBrowser** | `http://<instance-ip>:8080` | Manage game files (config, mods, saves). Default: admin / admin |
+### Optional: Security & Access
 
-## Connecting to the game
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `ssh_allowed_cidrs` | `["0.0.0.0/0"]` | Restrict SSH: use `["YOUR_IP/32"]` for your IP only |
+| `ssh_key_name` | `null` | EC2 key pair name for SSH. Leave null to use Session Manager only. |
+| `serial_console_password` | `null` | Password for Serial Console fallback (when SSM/SSH fail) |
 
-After deploy, use the EC2 instance **public IP** (Terraform output `ec2_public_ip`). Players connect on port **42420**.
+### Optional: Custom VPC
 
-## Shell access (no SSH key)
-
-Use **Session Manager**: EC2 Console → select instance → **Connect** → **Session Manager** tab → Connect. No key pair required.
-
-**Note:** SSM uses the public internet in the default VPC. For custom VPCs with private subnets (no NAT), add VPC endpoints for SSM (see [AWS docs](https://repost.aws/knowledge-center/ec2-systems-manager-vpc-endpoints)).
-
-## Optional: custom VPC
-
-In `terraform.tfvars`:
+If you don’t use the default VPC:
 
 ```hcl
 use_default_vpc = false
@@ -72,20 +72,57 @@ vpc_id          = "vpc-xxxxxxxx"
 subnet_ids      = ["subnet-xxxxxxxx"]
 ```
 
-Use a **public** subnet so the instance can reach ECR and the internet.
+Use a **public** subnet so the instance can reach the internet and ECR.
 
-## Optional: restrict SSH
+---
 
-By default SSH (port 22) is open to `0.0.0.0/0`. Restrict in `terraform.tfvars`:
+## Outputs
 
-```hcl
-ssh_allowed_cidrs = ["YOUR_IP/32"]
-```
+After `terraform apply`, you’ll see:
+
+| Output | Use |
+|--------|-----|
+| `ec2_public_ip` | IP players use to connect (port 42420) |
+| `portainer_url` | Portainer web UI |
+| `filebrowser_url` | FileBrowser web UI |
+| `github_actions_role_arn` | GitHub secret `AWS_ROLE_ARN` |
+| `ec2_instance_id` | GitHub secret `EC2_INSTANCE_ID` |
+
+---
+
+## Accessing the Server (No SSH Key)
+
+Use **Session Manager**:
+
+1. AWS Console → EC2 → Instances
+2. Select your instance
+3. **Connect** → **Session Manager** tab → **Connect**
+
+No SSH key or bastion host needed.
+
+---
 
 ## Destroying
+
+To remove everything (including game data):
 
 ```bash
 terraform destroy
 ```
 
-This removes the EC2 instance (and all game data on it), ECR repository, and related IAM/security groups.
+Type `yes` when prompted.
+
+---
+
+## File Layout
+
+| File | Purpose |
+|------|---------|
+| `ec2.tf` | EC2 instance, Elastic IP, security group, user-data |
+| `ecr.tf` | ECR repository and lifecycle policy |
+| `vpc.tf` | VPC/subnet selection |
+| `github-oidc.tf` | IAM role for GitHub Actions OIDC |
+| `iam.tf` | Instance profile and ECR permissions |
+| `variables.tf` | Variable definitions |
+| `outputs.tf` | Output values |
+| `versions.tf` | Terraform and provider versions |
