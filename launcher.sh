@@ -11,7 +11,7 @@ if [ -f .env ]; then
 fi
 
 # Fallback to environment variable if VS_VERSION is not set
-VS_VERSION=${VS_VERSION:-1.18.1}
+VS_VERSION=${VS_VERSION:-1.21.6}
 
 #Define cleanup procedure
 cleanup() {
@@ -48,19 +48,20 @@ download_server() {
 if [ ! -f ./server.sh ]; then
     echo "Server runtime is missing. Downloading indicated version set in environment variables: ${VS_VERSION}."
     download_server
-else
+fi
 
-    #Trap SIGTERM
+if [ -f ./server.sh ]; then
+    # Trap SIGTERM
     trap 'true' SIGTERM
 
-    # Starts the server
+    # Start the server
     ./server.sh start
     # Sleep to prevent a container stop
     sleep infinity &
 
-    #Wait
+    # Wait
     wait
 
-    #Cleanup
+    # Cleanup
     cleanup
 fi
