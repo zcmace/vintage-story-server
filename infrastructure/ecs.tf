@@ -89,8 +89,9 @@ resource "aws_ecs_task_definition" "vintage_story" {
   family                   = "${var.project_name}-task"
   network_mode             = "awsvpc"
   requires_compatibilities = ["FARGATE"]
-  cpu                      = var.fargate_cpu + (var.enable_filebrowser ? 256 : 0)
-  memory                   = var.fargate_memory_mb + (var.enable_filebrowser ? 512 : 0)
+  # Fargate requires valid CPU/memory combos: 512→1024-4096MB, 1024→2048-8192MB, etc.
+  cpu    = var.enable_filebrowser ? 1024 : var.fargate_cpu
+  memory = var.enable_filebrowser ? 2048 : var.fargate_memory_mb
   execution_role_arn       = aws_iam_role.ecs_execution.arn
   task_role_arn            = aws_iam_role.ecs_task.arn
 
