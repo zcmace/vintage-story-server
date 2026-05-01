@@ -22,6 +22,7 @@ Self-host a [Vintage Story](https://www.vintagestory.at/) game server on AWS wit
 | Document | Purpose |
 |----------|---------|
 | [DEPLOYMENT.md](DEPLOYMENT.md) | Full deployment guide: AWS setup, Terraform, GitHub Secrets |
+| [UPDATING.md](UPDATING.md) | How to update the game server version |
 | [infrastructure/README.md](infrastructure/README.md) | Terraform details, options, and troubleshooting |
 
 ## Local Development

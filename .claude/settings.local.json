@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\Zach\\\\Desktop\\\\vintage-story-server\" -Recurse -Force)",
+      "Bash(Select-Object FullName)",
+      "PowerShell(head *)"
+    ]
+  }
+}
