@@ -34,6 +34,27 @@ chown -R 1000:1000 /var/vintagestory/data
 
 set +e  # container setup is best-effort; don't abort if one step fails
 
+# Mount dedicated EBS data volume at /var/vintagestory
+# Find the non-root block device (works on both Nitro NVMe and older Xen naming)
+ROOT_DEV=$(lsblk -no pkname "$(findmnt -no SOURCE /)")
+DATA_DEV=""
+for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15; do
+  DATA_DEV=$(lsblk -dpno NAME | grep -v "^/dev/$ROOT_DEV$" | head -1)
+  if [ -n "$DATA_DEV" ]; then break; fi
+  sleep 2
+done
+
+if [ -n "$DATA_DEV" ]; then
+  # Format only if no filesystem present — preserves data on instance replacement
+  if ! blkid "$DATA_DEV" > /dev/null 2>&1; then
+    mkfs -t xfs "$DATA_DEV"
+  fi
+  mkdir -p /var/vintagestory
+  mount "$DATA_DEV" /var/vintagestory
+  UUID=$(blkid -s UUID -o value "$DATA_DEV")
+  echo "UUID=$UUID /var/vintagestory xfs defaults,nofail 0 2" >> /etc/fstab
+fi
+
 # ECR login (instance profile has ECR pull)
 # Use region from Terraform - IMDSv2 requires token, metadata curl can fail at boot
 # Command substitution avoids "Cannot perform interactive login from a non tty device" when run via SSM

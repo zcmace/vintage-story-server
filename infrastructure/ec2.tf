@@ -133,6 +133,26 @@ resource "aws_iam_instance_profile" "ec2" {
   role        = aws_iam_role.ec2.name
 }
 
+resource "aws_ebs_volume" "game_data" {
+  availability_zone = aws_instance.vintage_story.availability_zone
+  size              = var.data_volume_gb
+  type              = "gp3"
+
+  tags = {
+    Name = "${var.project_name}-data"
+  }
+
+  lifecycle {
+    prevent_destroy = true
+  }
+}
+
+resource "aws_volume_attachment" "game_data" {
+  device_name = "/dev/xvdf"
+  volume_id   = aws_ebs_volume.game_data.id
+  instance_id = aws_instance.vintage_story.id
+}
+
 resource "aws_ssm_parameter" "vs_version" {
   name  = "/${var.project_name}/vs-version"
   type  = "String"

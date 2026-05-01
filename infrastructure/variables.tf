@@ -53,9 +53,15 @@ variable "ec2_instance_type" {
 }
 
 variable "ec2_root_volume_gb" {
-  description = "Root EBS volume size in GB (game data stored here)"
+  description = "Root EBS volume size in GB"
   type        = number
   default     = 30
+}
+
+variable "data_volume_gb" {
+  description = "Size of the dedicated EBS data volume in GB (persists across instance replacement)"
+  type        = number
+  default     = 20
 }
 
 variable "ssh_allowed_cidrs" {
