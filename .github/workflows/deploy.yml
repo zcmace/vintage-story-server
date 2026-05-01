@@ -57,10 +57,20 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
+      - name: Get EC2 instance ID
+        id: ec2
+        run: |
+          ID=$(aws ec2 describe-instances \
+            --filters "Name=tag:Name,Values=vintage-story-server" \
+                      "Name=instance-state-name,Values=running" \
+            --query "Reservations[0].Instances[0].InstanceId" \
+            --output text)
+          echo "instance_id=$ID" >> $GITHUB_OUTPUT
+
       - name: Deploy via SSM (pull and restart container)
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          EC2_INSTANCE_ID: ${{ secrets.EC2_INSTANCE_ID }}
+          EC2_INSTANCE_ID: ${{ steps.ec2.outputs.instance_id }}
         run: |
           IMAGE="$ECR_REGISTRY/vintage-story-server:latest"
           PARAMS=$(jq -cn \

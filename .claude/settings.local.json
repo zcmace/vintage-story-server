@@ -3,7 +3,14 @@
     "allow": [
       "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\Zach\\\\Desktop\\\\vintage-story-server\" -Recurse -Force)",
       "Bash(Select-Object FullName)",
-      "PowerShell(head *)"
+      "PowerShell(head *)",
+      "Bash(aws iam list-role-policies *)",
+      "Bash(aws iam get-role-policy *)",
+      "Bash(aws ec2 describe-instances *)",
+      "Bash(aws ssm describe-instance-information *)",
+      "Bash(terraform output *)",
+      "Bash(terraform apply *)",
+      "Bash(gh secret *)"
     ]
   }
 }

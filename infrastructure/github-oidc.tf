@@ -66,7 +66,8 @@ resource "aws_iam_role_policy" "github_actions_ecr" {
 }
 
 # EC2 deploy via SSM Run Command (no SSH keys)
-# SendCommand requires permission on both the document and the target instance
+# SendCommand requires permission on both the document and the target instance.
+# Tag condition lets the policy survive instance recreation without updating secrets.
 resource "aws_iam_role_policy" "github_actions_ec2_deploy" {
   name_prefix = "ec2-deploy-"
   role        = aws_iam_role.github_actions.id
@@ -75,16 +76,26 @@ resource "aws_iam_role_policy" "github_actions_ec2_deploy" {
     Version = "2012-10-17"
     Statement = [
       {
-        Effect   = "Allow"
-        Action   = "ssm:SendCommand"
+        Effect = "Allow"
+        Action = "ssm:SendCommand"
         Resource = [
           "arn:aws:ssm:${data.aws_region.current.name}::document/AWS-RunShellScript",
-          aws_instance.vintage_story.arn
+          "arn:aws:ec2:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:instance/*"
         ]
+        Condition = {
+          StringEquals = {
+            "ec2:ResourceTag/Name" = "${var.project_name}-server"
+          }
+        }
       },
       {
         Effect   = "Allow"
         Action   = "ssm:GetCommandInvocation"
+        Resource = "*"
+      },
+      {
+        Effect   = "Allow"
+        Action   = "ec2:DescribeInstances"
         Resource = "*"
       }
     ]

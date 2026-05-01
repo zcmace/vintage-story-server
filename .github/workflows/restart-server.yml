@@ -21,15 +21,25 @@ jobs:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
 
+      - name: Get EC2 instance ID
+        id: ec2
+        run: |
+          ID=$(aws ec2 describe-instances \
+            --filters "Name=tag:Name,Values=vintage-story-server" \
+                      "Name=instance-state-name,Values=running" \
+            --query "Reservations[0].Instances[0].InstanceId" \
+            --output text)
+          echo "instance_id=$ID" >> $GITHUB_OUTPUT
+
       - name: Restart container via SSM
         run: |
           COMMAND_ID=$(aws ssm send-command \
-            --instance-ids "${{ secrets.EC2_INSTANCE_ID }}" \
+            --instance-ids "${{ steps.ec2.outputs.instance_id }}" \
             --document-name "AWS-RunShellScript" \
             --parameters '{"commands":["docker restart vintagestory_server"]}' \
             --output text \
             --query 'Command.CommandId')
 
           echo "Waiting for restart..."
-          aws ssm wait command-executed --command-id "$COMMAND_ID" --instance-id "${{ secrets.EC2_INSTANCE_ID }}"
+          aws ssm wait command-executed --command-id "$COMMAND_ID" --instance-id "${{ steps.ec2.outputs.instance_id }}"
           echo "Container restarted."
