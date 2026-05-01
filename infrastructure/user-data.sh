@@ -1,5 +1,5 @@
 #!/bin/bash
-set -e
+set -e  # exit on error during system setup
 
 # Install SSM agent
 sudo dnf install -y "https://s3.us-east-1.amazonaws.com/amazon-ssm-us-east-1/latest/linux_amd64/amazon-ssm-agent.rpm"
@@ -31,6 +31,8 @@ usermod -aG docker ssm-user
 # Create game data directory
 mkdir -p /var/vintagestory/data
 chown -R 1000:1000 /var/vintagestory/data
+
+set +e  # container setup is best-effort; don't abort if one step fails
 
 # ECR login (instance profile has ECR pull)
 # Use region from Terraform - IMDSv2 requires token, metadata curl can fail at boot

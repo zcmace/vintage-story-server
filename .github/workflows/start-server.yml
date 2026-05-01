@@ -61,16 +61,21 @@ jobs:
           echo "SSM agent did not come online within 5 minutes."
           exit 1
 
-      - name: Start game server container
+      - name: Start all containers
         if: steps.ec2.outputs.instance_id != ''
         run: |
+          PARAMS=$(jq -cn '{commands: [
+            "docker start vintagestory_server",
+            "docker start portainer 2>/dev/null || docker run -d --name portainer --restart always -p 9000:9000 -p 9443:9443 -v /var/run/docker.sock:/var/run/docker.sock -v portainer_data:/data portainer/portainer-ce:latest -H unix:///var/run/docker.sock",
+            "docker start filebrowser 2>/dev/null || docker run -d --name filebrowser --restart unless-stopped -p 8080:8080 -v /var/vintagestory/data:/data -e PUID=1000 -e PGID=1000 --health-cmd=\"wget -qO- http://127.0.0.1:8080/health || exit 1\" --health-interval=30s --health-timeout=3s --health-retries=3 filebrowser/filebrowser:latest --database /data/.filebrowser.db --root /data --port 8080"
+          ]}')
           COMMAND_ID=$(aws ssm send-command \
             --instance-ids "${{ steps.ec2.outputs.instance_id }}" \
             --document-name "AWS-RunShellScript" \
-            --parameters '{"commands":["docker start vintagestory_server"]}' \
+            --parameters "$PARAMS" \
             --output text \
             --query 'Command.CommandId')
           aws ssm wait command-executed \
             --command-id "$COMMAND_ID" \
             --instance-id "${{ steps.ec2.outputs.instance_id }}"
-          echo "Container started."
+          echo "All containers started."
