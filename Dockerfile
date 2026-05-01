@@ -4,7 +4,8 @@ EXPOSE 42420
 
 # Username and paths can be overridden from .env when building via docker-compose
 # (docker-compose loads .env and passes these as build-args). Defaults below are used for plain `docker build`.
-ENV VS_VERSION=1.21.6
+ARG VS_VERSION=1.21.6
+ENV VS_VERSION=${VS_VERSION}
 ARG USERNAME=vintagestory
 ARG VS_HOMEPATH=/home/vintagestory
 ARG VSPATH=/home/vintagestory/server

@@ -30,13 +30,23 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
+      - name: Get VS version for build
+        id: vs-build
+        run: |
+          VERSION=$(aws ssm get-parameter \
+            --name "/vintage-story/vs-version" \
+            --query Parameter.Value \
+            --output text)
+          echo "vs_version=$VERSION" >> $GITHUB_OUTPUT
+
       - name: Build and push Docker image
         id: build-push
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           IMAGE_TAG: ${{ github.sha }}
+          VS_VERSION: ${{ steps.vs-build.outputs.vs_version }}
         run: |
-          docker build -t $ECR_REGISTRY/vintage-story-server:$IMAGE_TAG .
+          docker build --build-arg VS_VERSION=$VS_VERSION -t $ECR_REGISTRY/vintage-story-server:$IMAGE_TAG .
           docker push $ECR_REGISTRY/vintage-story-server:$IMAGE_TAG
           docker tag $ECR_REGISTRY/vintage-story-server:$IMAGE_TAG $ECR_REGISTRY/vintage-story-server:latest
           docker push $ECR_REGISTRY/vintage-story-server:latest
