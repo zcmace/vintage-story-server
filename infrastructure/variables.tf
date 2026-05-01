@@ -80,7 +80,7 @@ variable "serial_console_password" {
 variable "vs_version" {
   description = "Vintage Story server version (env var for container)"
   type        = string
-  default     = "1.21.6"
+  default     = "1.22.1"
 }
 
 

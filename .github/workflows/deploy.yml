@@ -82,7 +82,8 @@ jobs:
               "docker pull " + $img,
               "docker stop vintagestory_server 2>/dev/null || true",
               "docker rm vintagestory_server 2>/dev/null || true",
-              "docker run -d --name vintagestory_server --restart unless-stopped -p 42420:42420 -p 42420:42420/udp -v /var/vintagestory/data:/var/vintagestory/data -e VS_VERSION=1.21.6 " + $img
+              "chown -R 1000:1000 /var/vintagestory/data",
+              "docker run -d --name vintagestory_server --restart unless-stopped -p 42420:42420 -p 42420:42420/udp -v /var/vintagestory/data:/var/vintagestory/data -e VS_VERSION=1.22.1 " + $img
             ]}')
           COMMAND_ID=$(aws ssm send-command \
             --instance-ids "$EC2_INSTANCE_ID" \
