@@ -1,4 +1,4 @@
-FROM debian:11
+FROM debian:12
 
 EXPOSE 42420
 
@@ -16,15 +16,15 @@ RUN apt-get update -q -y
 RUN apt-get install -yf \
     screen wget curl vim ca-certificates procps
 
-# .NET 8.0 runtime (required by Vintage Story server 1.19+)
+# .NET 10.0 runtime (required by Vintage Story server 1.22+)
 RUN apt-get install -yf \
     wget apt-transport-https
-RUN wget https://packages.microsoft.com/config/debian/11/packages-microsoft-prod.deb -O /tmp/packages-microsoft-prod.deb
+RUN wget https://packages.microsoft.com/config/debian/12/packages-microsoft-prod.deb -O /tmp/packages-microsoft-prod.deb
 RUN dpkg -i /tmp/packages-microsoft-prod.deb
 RUN rm /tmp/packages-microsoft-prod.deb
 RUN apt-get update -q -y
 RUN apt-get install -yf \
-    dotnet-runtime-8.0
+    dotnet-runtime-10.0
 
 # Add user
 RUN groupadd -g 1000 $USERNAME
