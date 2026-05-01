@@ -2,7 +2,7 @@
 
 > **Disclaimer:** I am not an expert and have not tested this in another AWS account, this is what worked for me. By hosting this, you are accepting the risks and costs of self-hosting on AWS. If you find any issues with the setup feel free to open an issue and I'll do my best to resolve.
 
-Self-host a [Vintage Story](https://www.vintagestory.at/) game server on AWS with one-click deploys from GitHub. No AWS access keys stored in GitHub—uses OIDC for secure deployments. No AWS access keys stored in GitHub—uses OIDC for secure deployments.
+Self-host a [Vintage Story](https://www.vintagestory.at/) game server on AWS with one-click deploys from GitHub. No AWS access keys stored in GitHub—uses OIDC for secure deployments.
 
 ## What You Get
 
