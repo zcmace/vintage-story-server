@@ -1,0 +1,101 @@
+name: Download Server Files
+
+on:
+  workflow_dispatch:
+
+env:
+  AWS_REGION: us-east-1
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  download:
+    name: Package and download server files
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Get running EC2 instance ID
+        id: ec2
+        run: |
+          ID=$(aws ec2 describe-instances \
+            --filters "Name=tag:Name,Values=vintage-story-server" \
+                      "Name=instance-state-name,Values=running" \
+            --query "Reservations[0].Instances[0].InstanceId" \
+            --output text)
+          if [ "$ID" = "None" ] || [ -z "$ID" ]; then
+            echo "No running instance found — start the server first."
+            exit 1
+          fi
+          echo "instance_id=$ID" >> $GITHUB_OUTPUT
+
+      - name: Get S3 downloads bucket name
+        id: bucket
+        run: |
+          BUCKET=$(aws ssm get-parameter \
+            --name "/vintage-story/downloads-bucket" \
+            --query Parameter.Value --output text)
+          echo "name=$BUCKET" >> $GITHUB_OUTPUT
+
+      - name: Zip server files and upload to S3 via SSM
+        id: upload
+        run: |
+          TIMESTAMP=$(date +%Y%m%d-%H%M%S)
+          KEY="server-files-${TIMESTAMP}.zip"
+          echo "key=$KEY" >> $GITHUB_OUTPUT
+
+          PARAMS=$(jq -cn --arg bucket "${{ steps.bucket.outputs.name }}" --arg key "$KEY" '{
+            commands: [
+              "dnf install -y zip 2>/dev/null || yum install -y zip 2>/dev/null || true",
+              ("cd /var/vintagestory && zip -r /tmp/" + $key + " data/"),
+              ("aws s3 cp /tmp/" + $key + " s3://" + $bucket + "/" + $key + " --region us-east-1"),
+              ("rm -f /tmp/" + $key)
+            ]
+          }')
+
+          COMMAND_ID=$(aws ssm send-command \
+            --instance-ids "${{ steps.ec2.outputs.instance_id }}" \
+            --document-name "AWS-RunShellScript" \
+            --parameters "$PARAMS" \
+            --output text \
+            --query 'Command.CommandId')
+
+          echo "Waiting for zip and upload to complete (this may take a few minutes)..."
+          aws ssm wait command-executed \
+            --command-id "$COMMAND_ID" \
+            --instance-id "${{ steps.ec2.outputs.instance_id }}"
+
+          # Check exit code
+          STATUS=$(aws ssm get-command-invocation \
+            --command-id "$COMMAND_ID" \
+            --instance-id "${{ steps.ec2.outputs.instance_id }}" \
+            --query StatusDetails --output text)
+          echo "SSM command status: $STATUS"
+          if [ "$STATUS" != "Success" ]; then
+            echo "SSM command failed."
+            exit 1
+          fi
+
+      - name: Download zip from S3
+        run: |
+          aws s3 cp \
+            "s3://${{ steps.bucket.outputs.name }}/${{ steps.upload.outputs.key }}" \
+            "${{ steps.upload.outputs.key }}"
+
+      - name: Delete zip from S3
+        if: always()
+        run: |
+          aws s3 rm "s3://${{ steps.bucket.outputs.name }}/${{ steps.upload.outputs.key }}" || true
+
+      - name: Upload as GitHub Actions artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: server-files-${{ steps.upload.outputs.key }}
+          path: ${{ steps.upload.outputs.key }}
+          retention-days: 7

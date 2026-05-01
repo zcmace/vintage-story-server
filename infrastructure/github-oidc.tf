@@ -119,7 +119,18 @@ resource "aws_iam_role_policy" "github_actions_ec2_deploy" {
       {
         Effect   = "Allow"
         Action   = "ssm:GetParameter"
-        Resource = aws_ssm_parameter.vs_version.arn
+        Resource = [
+          aws_ssm_parameter.vs_version.arn,
+          aws_ssm_parameter.downloads_bucket.arn
+        ]
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "s3:GetObject",
+          "s3:DeleteObject"
+        ]
+        Resource = "${aws_s3_bucket.downloads.arn}/*"
       }
     ]
   })
