@@ -99,6 +99,11 @@ resource "aws_iam_role_policy" "github_actions_ec2_deploy" {
         Effect   = "Allow"
         Action   = "ec2:DescribeInstances"
         Resource = "*"
+      },
+      {
+        Effect   = "Allow"
+        Action   = "ssm:GetParameter"
+        Resource = aws_ssm_parameter.vs_version.arn
       }
     ]
   })

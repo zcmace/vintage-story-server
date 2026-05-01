@@ -133,6 +133,12 @@ resource "aws_iam_instance_profile" "ec2" {
   role        = aws_iam_role.ec2.name
 }
 
+resource "aws_ssm_parameter" "vs_version" {
+  name  = "/${var.project_name}/vs-version"
+  type  = "String"
+  value = var.vs_version
+}
+
 resource "aws_eip" "vintage_story" {
   domain   = "vpc"
   instance = aws_instance.vintage_story.id

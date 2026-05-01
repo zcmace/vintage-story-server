@@ -57,8 +57,8 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
-      - name: Get EC2 instance ID
-        id: ec2
+      - name: Get EC2 instance ID and VS version
+        id: config
         run: |
           ID=$(aws ec2 describe-instances \
             --filters "Name=tag:Name,Values=vintage-story-server" \
@@ -67,23 +67,31 @@ jobs:
             --output text)
           echo "instance_id=$ID" >> $GITHUB_OUTPUT
 
+          VERSION=$(aws ssm get-parameter \
+            --name "/vintage-story/vs-version" \
+            --query Parameter.Value \
+            --output text)
+          echo "vs_version=$VERSION" >> $GITHUB_OUTPUT
+
       - name: Deploy via SSM (pull and restart container)
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          EC2_INSTANCE_ID: ${{ steps.ec2.outputs.instance_id }}
+          EC2_INSTANCE_ID: ${{ steps.config.outputs.instance_id }}
+          VS_VERSION: ${{ steps.config.outputs.vs_version }}
         run: |
           IMAGE="$ECR_REGISTRY/vintage-story-server:latest"
           PARAMS=$(jq -cn \
             --arg img "$IMAGE" \
             --arg reg "$ECR_REGISTRY" \
             --arg region "$AWS_REGION" \
+            --arg version "$VS_VERSION" \
             '{commands: [
               "AWS_PAGER=\"\" docker login -u AWS -p \"$(aws ecr get-login-password --region " + $region + ")\" " + $reg,
               "docker pull " + $img,
               "docker stop vintagestory_server 2>/dev/null || true",
               "docker rm vintagestory_server 2>/dev/null || true",
               "chown -R 1000:1000 /var/vintagestory/data",
-              "docker run -d --name vintagestory_server --restart unless-stopped -p 42420:42420 -p 42420:42420/udp -v /var/vintagestory/data:/var/vintagestory/data -e VS_VERSION=1.22.1 " + $img
+              "docker run -d --name vintagestory_server --restart unless-stopped -p 42420:42420 -p 42420:42420/udp -v /var/vintagestory/data:/var/vintagestory/data -e VS_VERSION=" + $version + " " + $img
             ]}')
           COMMAND_ID=$(aws ssm send-command \
             --instance-ids "$EC2_INSTANCE_ID" \
