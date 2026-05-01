@@ -76,9 +76,9 @@ jobs:
           PARAMS=$(jq -cn \
             --arg img "$IMAGE" \
             --arg reg "$ECR_REGISTRY" \
+            --arg region "$AWS_REGION" \
             '{commands: [
-              "REGION=$(curl -s http://169.254.169.254/latest/meta-data/placement/region)",
-              "AWS_PAGER=\"\" docker login -u AWS -p \"$(aws ecr get-login-password --region $REGION)\" " + $reg,
+              "AWS_PAGER=\"\" docker login -u AWS -p \"$(aws ecr get-login-password --region " + $region + ")\" " + $reg,
               "docker pull " + $img,
               "docker stop vintagestory_server 2>/dev/null || true",
               "docker rm vintagestory_server 2>/dev/null || true",

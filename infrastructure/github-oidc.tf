@@ -76,15 +76,17 @@ resource "aws_iam_role_policy" "github_actions_ec2_deploy" {
     Version = "2012-10-17"
     Statement = [
       {
-        Effect = "Allow"
-        Action = "ssm:SendCommand"
-        Resource = [
-          "arn:aws:ssm:${data.aws_region.current.name}::document/AWS-RunShellScript",
-          "arn:aws:ec2:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:instance/*"
-        ]
+        Effect   = "Allow"
+        Action   = "ssm:SendCommand"
+        Resource = "arn:aws:ssm:${data.aws_region.current.name}::document/AWS-RunShellScript"
+      },
+      {
+        Effect   = "Allow"
+        Action   = "ssm:SendCommand"
+        Resource = "arn:aws:ec2:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:instance/*"
         Condition = {
           StringEquals = {
-            "ec2:ResourceTag/Name" = "${var.project_name}-server"
+            "ssm:resourceTag/Name" = "${var.project_name}-server"
           }
         }
       },
