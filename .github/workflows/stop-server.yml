@@ -35,6 +35,37 @@ jobs:
           fi
           echo "instance_id=$ID" >> $GITHUB_OUTPUT
 
+      - name: Ensure SSM agent is online (reboot if needed)
+        if: steps.ec2.outputs.instance_id != ''
+        run: |
+          INSTANCE_ID="${{ steps.ec2.outputs.instance_id }}"
+          STATUS=$(aws ssm describe-instance-information \
+            --filters "Key=InstanceIds,Values=$INSTANCE_ID" \
+            --query "InstanceInformationList[0].PingStatus" \
+            --output text 2>/dev/null)
+          if [ "$STATUS" = "Online" ]; then
+            echo "SSM agent is Online."
+            exit 0
+          fi
+          echo "SSM agent is $STATUS — rebooting EC2 to recover..."
+          aws ec2 reboot-instances --instance-ids "$INSTANCE_ID"
+          aws ec2 wait instance-running --instance-ids "$INSTANCE_ID"
+          echo "Instance running. Waiting for SSM agent..."
+          for i in $(seq 1 30); do
+            STATUS=$(aws ssm describe-instance-information \
+              --filters "Key=InstanceIds,Values=$INSTANCE_ID" \
+              --query "InstanceInformationList[0].PingStatus" \
+              --output text 2>/dev/null)
+            if [ "$STATUS" = "Online" ]; then
+              echo "SSM agent online after reboot."
+              exit 0
+            fi
+            echo "Attempt $i/30: SSM $STATUS, retrying in 10s..."
+            sleep 10
+          done
+          echo "SSM agent did not come online within 5 minutes after reboot."
+          exit 1
+
       - name: Stop game server container gracefully
         if: steps.ec2.outputs.instance_id != ''
         run: |

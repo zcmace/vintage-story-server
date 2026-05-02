@@ -32,6 +32,15 @@ usermod -aG docker ssm-user
 mkdir -p /var/vintagestory/data
 chown -R 1000:1000 /var/vintagestory/data
 
+# Swap: 4GB safety net for game server memory pressure (VS server can exceed 1GB RAM)
+fallocate -l 4G /swapfile
+chmod 600 /swapfile
+mkswap /swapfile
+swapon /swapfile
+echo "/swapfile none swap sw 0 0" >> /etc/fstab
+sysctl -w vm.swappiness=10
+echo "vm.swappiness=10" >> /etc/sysctl.d/99-swappiness.conf
+
 set +e  # container setup is best-effort; don't abort if one step fails
 
 # Mount dedicated EBS data volume at /var/vintagestory

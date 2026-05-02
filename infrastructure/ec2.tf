@@ -201,3 +201,82 @@ resource "aws_instance" "vintage_story" {
     Name = "${var.project_name}-server"
   }
 }
+
+resource "aws_iam_role" "dlm" {
+  name_prefix = "${var.project_name}-dlm-"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Action    = "sts:AssumeRole"
+      Effect    = "Allow"
+      Principal = { Service = "dlm.amazonaws.com" }
+    }]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "dlm" {
+  role       = aws_iam_role.dlm.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSDataLifecycleManagerServiceRole"
+}
+
+resource "aws_dlm_lifecycle_policy" "game_data" {
+  description        = "Daily snapshot of ${var.project_name} game data volume - 7-day retention"
+  execution_role_arn = aws_iam_role.dlm.arn
+  state              = "ENABLED"
+
+  policy_details {
+    resource_types = ["VOLUME"]
+
+    schedule {
+      name = "daily"
+
+      create_rule {
+        interval      = 24
+        interval_unit = "HOURS"
+        times         = ["03:00"] # 3am UTC — server likely stopped
+      }
+
+      retain_rule {
+        count = 7
+      }
+
+      copy_tags = true
+    }
+
+    target_tags = {
+      Name = "${var.project_name}-data"
+    }
+  }
+}
+
+resource "aws_sns_topic" "idle_stop" {
+  name = "${var.project_name}-idle-stop"
+}
+
+resource "aws_sns_topic_subscription" "idle_stop_email" {
+  topic_arn = aws_sns_topic.idle_stop.arn
+  protocol  = "email"
+  endpoint  = var.notification_email
+}
+
+resource "aws_cloudwatch_metric_alarm" "idle_stop" {
+  alarm_name        = "${var.project_name}-idle-stop"
+  alarm_description = "Stop EC2 after 30 min of near-zero network traffic (no players connected)"
+
+  namespace   = "AWS/EC2"
+  metric_name = "NetworkIn"
+  dimensions  = { InstanceId = aws_instance.vintage_story.id }
+
+  statistic           = "Sum"
+  period              = 300 # 5-minute windows
+  evaluation_periods  = 6   # 6 × 5 min = 30 minutes sustained
+  threshold           = 50000 # 50 KB — well above SSM/health-check noise, well below game traffic
+  comparison_operator = "LessThanThreshold"
+
+  alarm_actions      = [
+    "arn:aws:automate:${data.aws_region.current.name}:ec2:stop",
+    aws_sns_topic.idle_stop.arn,
+  ]
+  treat_missing_data = "notBreaching" # instance already stopped → don't re-trigger
+}

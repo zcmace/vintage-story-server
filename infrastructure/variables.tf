@@ -49,7 +49,7 @@ variable "ecr_image_retention_count" {
 variable "ec2_instance_type" {
   description = "EC2 instance type for the game server"
   type        = string
-  default     = "t3.small"
+  default     = "t3.large"
 }
 
 variable "ec2_root_volume_gb" {
@@ -88,6 +88,13 @@ variable "vs_version" {
   type        = string
   default     = "1.22.1"
 }
+
+variable "notification_email" {
+  description = "Email address for server auto-stop notifications"
+  type        = string
+  default     = "zcmace@gmail.com"
+}
+
 
 
 # -----------------------------------------------------------------------------
