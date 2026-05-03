@@ -1,4 +1,4 @@
-name: Deploy to AWS
+name: Deploy / Upgrade Server
 
 on:
   workflow_dispatch:
