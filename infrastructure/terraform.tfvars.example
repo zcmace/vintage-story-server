@@ -4,16 +4,20 @@
 aws_region   = "us-east-1"
 environment  = "prod"
 
-# Required for GitHub Actions OIDC - replace with your GitHub username and repo name
+# Required: GitHub Actions OIDC - replace with your GitHub username and repo name
 github_org   = "your-github-username"
 github_repo  = "vintage-story-server"
+
+# Required: email for auto-stop CloudWatch alarm notifications
+# AWS sends a confirmation email — click the link or alarms won't deliver
+notification_email = "your-email@example.com"
 
 # Optional: use a custom VPC
 # use_default_vpc = false
 # vpc_id          = "vpc-xxxxxxxx"
 # subnet_ids      = ["subnet-xxxxxxxx", "subnet-yyyyyyyy"]
 
-# Optional: EC2 instance size and game version
-# ec2_instance_type  = "t3.small"
+# Optional: EC2 instance size and game version (defaults in variables.tf)
+# ec2_instance_type  = "t3.large"
 # ec2_root_volume_gb = 30
-# vs_version         = "1.21.6"
+# vs_version         = "1.22.1"

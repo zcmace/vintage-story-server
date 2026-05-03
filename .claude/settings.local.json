@@ -37,7 +37,8 @@
       "Bash(aws ec2 *)",
       "Bash(aws cloudwatch get-metric-statistics *)",
       "Bash(aws logs *)",
-      "Bash(terraform state *)"
+      "Bash(terraform state *)",
+      "PowerShell(cd \"C:\\\\Users\\\\Zach\\\\Desktop\\\\vintage-story-server\"; Get-ChildItem -Recurse -Force -ErrorAction SilentlyContinue | ForEach-Object { $_.FullName } | Sort-Object)"
     ]
   }
 }

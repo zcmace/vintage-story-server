@@ -13,7 +13,7 @@ You will:
 5. Deploy the server with one click from GitHub Actions
 
 **Estimated time:** 20–30 minutes  
-**Cost:** ~$15–25/month (t3.small EC2 + Elastic IP)
+**Cost:** ~$15–25/month with the auto-stop alarm running (t3.large EC2 + Elastic IP). Cost is near-zero when the instance is stopped.
 
 ---
 
@@ -67,14 +67,17 @@ Verify: `aws sts get-caller-identity` (should print your account info)
 
 3. Edit `terraform.tfvars` in any text editor. **You must change these:**
    ```hcl
-   github_org   = "YOUR_GITHUB_USERNAME"   # e.g. "johndoe"
-   github_repo  = "vintage-story-server"   # your repo name (usually keep as-is)
+   github_org         = "YOUR_GITHUB_USERNAME"    # e.g. "johndoe"
+   github_repo        = "vintage-story-server"    # your repo name (usually keep as-is)
+   notification_email = "your-email@example.com"  # CloudWatch auto-stop alerts
    ```
+
+   After you run `terraform apply`, AWS will send a **subscription confirmation email**. Click the link in it or the auto-stop alarm won't send alerts.
 
    Optional settings (defaults are fine for most users):
    - `aws_region` – AWS region (default: `us-east-1`)
-   - `ec2_instance_type` – Server size (default: `t3.small`)
-   - `vs_version` – Vintage Story version (default: `1.21.6`)
+   - `ec2_instance_type` – Server size (default: `t3.large`; use `t3.small` for a private server)
+   - `vs_version` – Vintage Story version (default: `1.22.1`)
 
 4. **Do not commit** `terraform.tfvars` if it contains secrets (e.g. `serial_console_password`). It’s in `.gitignore` by default.
 

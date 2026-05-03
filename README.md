@@ -80,12 +80,13 @@ All cloud resources are managed by Terraform in `infrastructure/`.
 | Resource | Purpose |
 |----------|---------|
 | EC2 instance | Runs Docker and all server containers |
-| EBS volume (20 GB, `prevent_destroy`) | Persistent game data — survives instance replacement |
+| EBS data volume (20 GB, `prevent_destroy`) | Persistent game data — survives instance replacement or `terraform destroy` |
 | Elastic IP | Static public IP so the server address never changes |
 | ECR repository | Stores the Docker image |
 | S3 bucket | Temporary staging for server file downloads (1-day auto-expiry) |
 | SSM Parameters | Single source of truth for `vs_version` and the downloads bucket name |
 | IAM / OIDC | GitHub Actions assumes an AWS role — no long-lived access keys stored in GitHub |
+| CloudWatch alarm | Stops EC2 after 30 min of no player traffic; sends email alert |
 
 ## License
 

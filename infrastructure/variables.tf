@@ -90,9 +90,8 @@ variable "vs_version" {
 }
 
 variable "notification_email" {
-  description = "Email address for server auto-stop notifications"
+  description = "Email address for CloudWatch auto-stop alarm notifications. AWS will send a confirmation email — click the link before alerts will be delivered."
   type        = string
-  default     = "zcmace@gmail.com"
 }
 
 

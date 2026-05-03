@@ -13,9 +13,11 @@ Terraform config for running a Vintage Story server on **AWS EC2**. Creates the 
 | **ECR repository** | Stores the Vintage Story Docker image. GitHub Actions builds and pushes here. |
 | **EC2 instance** | Amazon Linux 2023 with Docker. Runs Vintage Story, Portainer, and FileBrowser. |
 | **Elastic IP** | Static public IP so players can always connect to the same address. |
-| **EBS volume** | Root disk. Game data lives at `/var/vintagestory/data`. |
+| **EBS root volume** | Root disk (30 GB default). |
+| **EBS data volume** | Dedicated 20 GB volume for game saves at `/var/vintagestory/data`. Has `prevent_destroy` — survives `terraform destroy` + re-apply. |
 | **Security group** | Firewall rules: 42420 (game), 9000/9443 (Portainer), 8080 (FileBrowser), 22 (SSH). |
 | **IAM roles** | Instance role (ECR pull, SSM); GitHub OIDC role (ECR push, SSM deploy). |
+| **SNS topic + alarm** | CloudWatch alarm stops EC2 after 30 min of no player traffic. Email alert sent to `notification_email`. |
 
 ---
 
@@ -44,15 +46,17 @@ Copy `terraform.tfvars.example` to `terraform.tfvars` and adjust.
 |----------|-------------|
 | `github_org` | Your GitHub username or organization (e.g. `johndoe`) |
 | `github_repo` | Repository name (e.g. `vintage-story-server`) |
+| `notification_email` | Email for auto-stop CloudWatch alarm. AWS sends a confirmation link — click it or alerts won't deliver. |
 
 ### Optional (defaults are fine for most users)
 
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `aws_region` | `us-east-1` | AWS region |
-| `ec2_instance_type` | `t3.small` | Instance size (~$15/mo). Use `t3.medium` for more players. |
-| `ec2_root_volume_gb` | `30` | Disk size for game data |
-| `vs_version` | `1.21.6` | Vintage Story server version |
+| `ec2_instance_type` | `t3.large` | Instance size. Use `t3.small` for a private/low-pop server (~$15/mo stopped often). |
+| `ec2_root_volume_gb` | `30` | Root disk size in GB |
+| `data_volume_gb` | `20` | Dedicated game-data EBS volume size in GB |
+| `vs_version` | `1.22.1` | Vintage Story server version |
 
 ### Optional: Security & Access
 
