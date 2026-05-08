@@ -19,6 +19,25 @@ services:
       - vintagestory_network
     restart: unless-stopped
 
+  backup:
+    image: offen/docker-volume-backup:v2
+    container_name: vs_backup
+    environment:
+      - BACKUP_CRON_EXPRESSION=${BACKUP_CRON_EXPRESSION:-0 3 * * *}
+      - BACKUP_FILENAME=vs-backup-%Y-%m-%dT%H-%M-%S.tar.gz
+      - BACKUP_RETENTION_DAYS=${BACKUP_RETENTION_DAYS:-7}
+      # Optional S3 upload — set these to enable
+      # - AWS_S3_BUCKET_NAME=
+      # - AWS_ACCESS_KEY_ID=
+      # - AWS_SECRET_ACCESS_KEY=
+      # - AWS_ENDPOINT=        # set for non-AWS S3-compatible (Backblaze, etc.)
+    volumes:
+      - ${VS_DATA_PATH:-./vintage_story/data}:/backup/data:ro
+      - ${BACKUP_PATH:-./backups}:/archive
+    networks:
+      - vintagestory_network
+    restart: unless-stopped
+
 networks:
   vintagestory_network:
     driver: bridge
