@@ -38,7 +38,12 @@
       "Bash(aws cloudwatch get-metric-statistics *)",
       "Bash(aws logs *)",
       "Bash(terraform state *)",
-      "PowerShell(cd \"C:\\\\Users\\\\Zach\\\\Desktop\\\\vintage-story-server\"; Get-ChildItem -Recurse -Force -ErrorAction SilentlyContinue | ForEach-Object { $_.FullName } | Sort-Object)"
+      "PowerShell(cd \"C:\\\\Users\\\\Zach\\\\Desktop\\\\vintage-story-server\"; Get-ChildItem -Recurse -Force -ErrorAction SilentlyContinue | ForEach-Object { $_.FullName } | Sort-Object)",
+      "Bash(Select-Object FullName, PSIsContainer)",
+      "Bash(Sort-Object FullName)",
+      "Bash(Format-Table -AutoSize)",
+      "PowerShell(tree \"C:\\\\Users\\\\Zach\\\\Desktop\\\\vintage-story-server\" -L 3 /A /F)",
+      "PowerShell(Get-ChildItem -Path \"C:\\\\Users\\\\Zach\\\\Desktop\\\\vintage-story-server\" -Recurse -Directory | ForEach-Object { $_.FullName.Replace\\(\"C:\\\\Users\\\\Zach\\\\Desktop\\\\vintage-story-server\\\\\", \"\"\\) } | Sort-Object | Select-Object -First 50)"
     ]
   }
 }
