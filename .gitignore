@@ -11,6 +11,7 @@ portainer/data/
 # IDE
 .vscode/
 .idea/
+.claude/
 *.swp
 *.swo
 
