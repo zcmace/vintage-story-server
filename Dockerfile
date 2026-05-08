@@ -14,7 +14,7 @@ ARG DATAPATH=/var/vintagestory/data
 # Install dependencies
 RUN apt-get update -q -y
 RUN apt-get install -yf \
-    screen wget curl vim ca-certificates procps
+    screen wget curl vim ca-certificates procps gosu
 
 # .NET 10.0 runtime (required by Vintage Story server 1.22+)
 RUN apt-get install -yf \
@@ -49,14 +49,11 @@ RUN cd $VSPATH && \
 #changes work dir
 WORKDIR $VSPATH
 
-# Create container Launch script
+# Launcher and entrypoint
 ADD launcher.sh $VS_HOMEPATH
-RUN chmod +x $VS_HOMEPATH/launcher.sh
-RUN chown $USERNAME $VS_HOMEPATH/launcher.sh
+RUN chmod +x $VS_HOMEPATH/launcher.sh && chown $USERNAME $VS_HOMEPATH/launcher.sh
 
-# Changes user
-USER $USERNAME
+COPY docker-entrypoint.sh /docker-entrypoint.sh
+RUN chmod +x /docker-entrypoint.sh
 
-# Start the server
-# This script hooks the stop command
-ENTRYPOINT ../launcher.sh
+ENTRYPOINT ["/docker-entrypoint.sh"]
