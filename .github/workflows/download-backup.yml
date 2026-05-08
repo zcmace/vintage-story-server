@@ -3,10 +3,10 @@ name: Download Backup
 on:
   workflow_dispatch:
     inputs:
-      backup_path:
-        description: 'Path to backups directory on the server'
+      data_path:
+        description: 'Path to game data directory on the server'
         required: false
-        default: '~/backups'
+        default: '~/vintage_story/data'
 
 jobs:
   download-backup:
@@ -20,18 +20,17 @@ jobs:
           chmod 600 ~/.ssh/id_rsa
           ssh-keyscan -H "${{ secrets.SSH_HOST }}" >> ~/.ssh/known_hosts
 
-      - name: Trigger backup
+      - name: Create archive on server
         run: |
           ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} \
-            "docker exec vs_backup backup"
+            "tar -czf /tmp/vs-backup.tar.gz -C $(dirname ${{ inputs.data_path }}) $(basename ${{ inputs.data_path }})"
 
-      - name: Copy latest backup to runner
+      - name: Copy archive to runner
         run: |
-          BACKUP_FILE=$(ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} \
-            "ls -t ${{ inputs.backup_path }}/*.tar.gz | head -1")
-          scp ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:"$BACKUP_FILE" ./backup.tar.gz
+          scp ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/tmp/vs-backup.tar.gz ./backup.tar.gz
+          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "rm /tmp/vs-backup.tar.gz"
 
-      - name: Upload backup artifact
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: vs-backup-${{ github.run_id }}
