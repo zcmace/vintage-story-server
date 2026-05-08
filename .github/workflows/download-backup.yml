@@ -1,0 +1,39 @@
+name: Download Backup
+
+on:
+  workflow_dispatch:
+    inputs:
+      backup_path:
+        description: 'Path to backups directory on the server'
+        required: false
+        default: '~/backups'
+
+jobs:
+  download-backup:
+    name: Pull backup from server
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H "${{ secrets.SSH_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Trigger backup
+        run: |
+          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} \
+            "docker exec vs_backup backup"
+
+      - name: Copy latest backup to runner
+        run: |
+          BACKUP_FILE=$(ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} \
+            "ls -t ${{ inputs.backup_path }}/*.tar.gz | head -1")
+          scp ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:"$BACKUP_FILE" ./backup.tar.gz
+
+      - name: Upload backup artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: vs-backup-${{ github.run_id }}
+          path: backup.tar.gz
+          retention-days: 7
