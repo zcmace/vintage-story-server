@@ -3,7 +3,6 @@ portainer_password.txt
 
 # Data directories (if storing locally)
 vintage_story/*
-portainer/data/
 
 # Docker
 *.log

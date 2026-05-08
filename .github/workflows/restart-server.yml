@@ -69,8 +69,7 @@ jobs:
         run: |
           PARAMS=$(jq -cn '{commands: [
             "docker restart vintagestory_server",
-            "docker start portainer 2>/dev/null || docker run -d --name portainer --restart always -p 9000:9000 -p 9443:9443 -v /var/run/docker.sock:/var/run/docker.sock -v portainer_data:/data portainer/portainer-ce:latest -H unix:///var/run/docker.sock",
-            "docker start filebrowser 2>/dev/null || docker run -d --name filebrowser --restart unless-stopped -p 8080:8080 -v /var/vintagestory/data:/data -e PUID=1000 -e PGID=1000 --health-cmd=\"wget -qO- http://127.0.0.1:8080/health || exit 1\" --health-interval=30s --health-timeout=3s --health-retries=3 filebrowser/filebrowser:latest --database /data/.filebrowser.db --root /data --port 8080"
+            "docker start filebrowser 2>/dev/null || docker run -d --name filebrowser --restart unless-stopped -p 8080:8080 -v /var/vintagestory/data:/srv -v filebrowser_db:/database filebrowser/filebrowser:latest"
           ]}')
           COMMAND_ID=$(aws ssm send-command \
             --instance-ids "${{ steps.ec2.outputs.instance_id }}" \

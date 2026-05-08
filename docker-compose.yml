@@ -1,4 +1,3 @@
-version: "3.9"
 services:
   vsserver:
     image: ${IMAGE:-ghcr.io/zcmace/vintage-story-server}:${VS_VERSION:-latest}
@@ -18,6 +17,21 @@ services:
     networks:
       - vintagestory_network
     restart: unless-stopped
+
+  filebrowser:
+    image: filebrowser/filebrowser:latest
+    container_name: vs_filebrowser
+    ports:
+      - "8080:8080"
+    volumes:
+      - ${VS_DATA_PATH:-./vintage_story/data}:/srv
+      - filebrowser_db:/database
+    networks:
+      - vintagestory_network
+    restart: unless-stopped
+
+volumes:
+  filebrowser_db:
 
 networks:
   vintagestory_network:
