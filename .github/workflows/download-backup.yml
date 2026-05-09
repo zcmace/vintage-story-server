@@ -23,7 +23,7 @@ jobs:
       - name: Create archive on server
         run: |
           ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} \
-            "tar -czf /tmp/vs-backup.tar.gz -C $(dirname ${{ inputs.data_path }}) $(basename ${{ inputs.data_path }})"
+            'tar -czf /tmp/vs-backup.tar.gz -C $(dirname ${{ inputs.data_path }}) $(basename ${{ inputs.data_path }})'
 
       - name: Copy archive to runner
         run: |

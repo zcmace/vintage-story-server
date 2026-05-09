@@ -1,8 +1,9 @@
 # Portainer password file
 portainer_password.txt
 
+
 # Data directories (if storing locally)
-vintage_story/*
+./vintage_story/
 
 # Docker
 *.log
