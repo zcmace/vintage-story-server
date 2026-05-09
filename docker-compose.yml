@@ -1,39 +1,43 @@
-version: "3.9"
 services:
   vsserver:
+    image: ${IMAGE:-ghcr.io/zcmace/vintage-story-server}:${VS_VERSION:-latest}
     build:
       context: .
       dockerfile: Dockerfile
       args:
-        - VS_HOMEPATH=${VS_HOMEPATH:-/home/vintagestory}
-        - VSPATH=${VSPATH:-/home/vintagestory/server}
-        - DATAPATH=${DATAPATH:-/var/vintagestory/data}
-    image: vintage_story_server:any
+        - VS_VERSION=${VS_VERSION:-1.22.1}
     container_name: vintagestory_server
     ports:
       - "42420:42420"
+      - "42420:42420/udp"
     volumes:
-      - ${VS_SERVER_PATH:-./vintage_story/server}:${VSPATH:-/home/vintagestory/server}
-      - ${VS_DATA_PATH:-./vintage_story/data}:${DATAPATH:-/var/vintagestory/data}
+      - ${VS_DATA_PATH:-./vintage_story/data}:/var/vintagestory/data
     environment:
-      - VS_VERSION=${VS_VERSION:-1.21.6}
+      - VS_VERSION=${VS_VERSION:-1.22.1}
     networks:
       - vintagestory_network
     restart: unless-stopped
 
-  portainer:
-    image: portainer/portainer-ce:latest
-    container_name: portainer
+  filebrowser:
+    image: filebrowser/filebrowser:latest
+    container_name: vs_filebrowser
     ports:
-      - "9000:9000"
-      - "9443:9443"
+      - "8080:80"
     volumes:
-      - ${PORTAINER_DATA_PATH:-./portainer/data}:/data
-      - /var/run/docker.sock:/var/run/docker.sock
-    command: -H unix:///var/run/docker.sock
-    restart: always
+      - ${VS_DATA_PATH:-./vintage_story/data}:/srv
+      - filebrowser_db:/database
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        [ -f /database/filebrowser.db ] || (filebrowser config init -d /database/filebrowser.db && filebrowser config set --minimumPasswordLength 0 -d /database/filebrowser.db && filebrowser users add admin "${FB_ADMIN_PASSWORD:-adminpassword}" --perm.admin -d /database/filebrowser.db)
+        exec filebrowser -d /database/filebrowser.db -r /srv -a 0.0.0.0 -p 80
     networks:
       - vintagestory_network
+    restart: unless-stopped
+
+volumes:
+  filebrowser_db:
 
 networks:
   vintagestory_network:

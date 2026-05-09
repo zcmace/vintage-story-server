@@ -1,19 +1,9 @@
-<<<<<<< Updated upstream
-# Environment files
-.env
-.env.local
-.env.*.local
-
 # Portainer password file
 portainer_password.txt
 
-# Data directories (if storing locally)
-vintage_story/*
-portainer/data/
-=======
+
 # Data directories (if storing locally)
 ./vintage_story/
->>>>>>> Stashed changes
 
 # Docker
 *.log
@@ -21,6 +11,7 @@ portainer/data/
 # IDE
 .vscode/
 .idea/
+.claude/
 *.swp
 *.swo
 
