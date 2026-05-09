@@ -22,10 +22,16 @@ services:
     image: filebrowser/filebrowser:latest
     container_name: vs_filebrowser
     ports:
-      - "8080:8080"
+      - "8080:80"
     volumes:
       - ${VS_DATA_PATH:-./vintage_story/data}:/srv
       - filebrowser_db:/database
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        [ -f /database/filebrowser.db ] || (filebrowser config init -d /database/filebrowser.db && filebrowser config set --minimumPasswordLength 0 -d /database/filebrowser.db && filebrowser users add admin "${FB_ADMIN_PASSWORD:-adminpassword}" --perm.admin -d /database/filebrowser.db)
+        exec filebrowser -d /database/filebrowser.db -r /srv -a 0.0.0.0 -p 80
     networks:
       - vintagestory_network
     restart: unless-stopped
