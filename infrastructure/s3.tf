@@ -1,5 +1,6 @@
 resource "aws_s3_bucket" "downloads" {
   bucket_prefix = "${var.project_name}-downloads-"
+  force_destroy = true
 
   tags = {
     Name = "${var.project_name}-downloads"

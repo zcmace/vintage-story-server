@@ -142,9 +142,6 @@ resource "aws_ebs_volume" "game_data" {
     Name = "${var.project_name}-data"
   }
 
-  lifecycle {
-    prevent_destroy = true
-  }
 }
 
 resource "aws_volume_attachment" "game_data" {
